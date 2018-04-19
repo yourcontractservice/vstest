@@ -4,8 +4,10 @@
 namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests
 {
     using System.Collections.Generic;
+    using System.Globalization;
     using System.IO;
     using System.Linq;
+    using System.Reflection;
 
     using CoreUtilities.Tracing.Interfaces;
 
@@ -38,9 +40,10 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests
         public void ExecutorPrintsSplashScreenTest()
         {
             var mockOutput = new MockOutput();
-            var exitCode = new Executor(mockOutput, this.mockTestPlatformEventSource.Object).Execute("/?");
+            var exitCode = new Executor(mockOutput, this.mockTestPlatformEventSource.Object).Execute("/badArgument");
+            var assemblyVersion = typeof(Executor).GetTypeInfo().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
 
-            Assert.AreEqual(0, exitCode, "Exit code must be One for bad arguments");
+            Assert.AreEqual(1, exitCode, "Exit code must be One for bad arguments");
 
             // Verify that messages exist
             Assert.IsTrue(mockOutput.Messages.Count > 0, "Executor must print atleast copyright info");
@@ -51,29 +54,35 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests
                 mockOutput.Messages.First()
                     .Message.Contains(CommandLineResources.MicrosoftCommandLineTitle.Substring(0, 20)),
                 "First Printed message must be Microsoft Copyright");
+
+            Assert.IsTrue(mockOutput.Messages.First().Message.EndsWith(assemblyVersion));
         }
 
 
         /// <summary>
-        /// Executor should try find "project.json" if empty args given
+        /// Executor should Print Error message and Help contents when no arguments are provided.
         /// </summary>
         [TestMethod]
-        public void ExecutorEmptyArgsCallRunTestsProcessor()
+        public void ExecutorEmptyArgsPrintsErrorAndHelpMessage()
         {
             var mockOutput = new MockOutput();
             var exitCode = new Executor(mockOutput, this.mockTestPlatformEventSource.Object).Execute(null);
 
-            // Since no projectjsons exist in current folder it should fail
-            Assert.AreEqual(1, exitCode, "Exit code must be One for bad arguments");
+            Assert.AreEqual(1, exitCode, "Exit code must be One when no arguments are provided.");
 
-            //// Verify that messages exist
-            //Assert.IsTrue(mockOutput.Messages.Count > 0, "Executor must print atleast copyright info");
-            //Assert.IsNotNull(mockOutput.Messages.First().Message, "First Printed Message cannot be null or empty");
+            Assert.IsTrue(mockOutput.Messages.Any(message => message.Message.Contains(CommandLineResources.NoArgumentsProvided)));
+        }
 
-            //// Just check first 20 characters - don't need to check whole thing as assembly version is variable
-            //Assert.IsTrue(mockOutput.Messages.First().Message.Contains(
-            //    Microsoft.VisualStudio.TestPlatform.CommandLine.Resources.MicrosoftCommandLineTitle.Substring(0, 20)),
-            //    "First Printed message must be Microsoft Copyright");
+        [TestMethod]
+        public void ExecutorWithInvalidArgsShouldPrintErrorMessage()
+        {
+            var mockOutput = new MockOutput();
+            string badArg = "/badArgument";
+            var exitCode = new Executor(mockOutput, this.mockTestPlatformEventSource.Object).Execute(badArg);
+
+            Assert.AreEqual(1, exitCode, "Exit code must be One when no arguments are provided.");
+
+            Assert.IsTrue(mockOutput.Messages.Any(message => message.Message.Contains(string.Format(CommandLineResources.TestSourceFileNotFound, badArg))));
         }
 
         /// <summary>
@@ -84,9 +93,9 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests
         {
             var mockOutput = new MockOutput();
             var exitCode = new Executor(mockOutput, this.mockTestPlatformEventSource.Object).Execute(null);
-            RunConfiguration runConfiguration =  XmlRunSettingsUtilities.GetRunConfigurationNode(RunSettingsManager.Instance.ActiveRunSettings.SettingsXml);
+            RunConfiguration runConfiguration = XmlRunSettingsUtilities.GetRunConfigurationNode(RunSettingsManager.Instance.ActiveRunSettings.SettingsXml);
             Assert.AreEqual(runConfiguration.ResultsDirectory, Constants.DefaultResultsDirectory);
-            Assert.AreEqual(runConfiguration.TargetFrameworkVersion.ToString(), Framework.DefaultFramework.ToString());
+            Assert.AreEqual(runConfiguration.TargetFramework.ToString(), Framework.DefaultFramework.ToString());
             Assert.AreEqual(runConfiguration.TargetPlatform, Constants.DefaultPlatform);
         }
 
@@ -109,7 +118,6 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests
         }
 
         [TestMethod]
-
         public void ExecuteShouldExitWithErrorOnInvalidArgumentCombination()
         {
             // Create temp file for testsource dll to pass FileUtil.Exits()
@@ -125,6 +133,131 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests
             File.Delete(testSourceDllPath);
         }
 
+        [TestMethod]
+        public void ExecuteShouldExitWithErrorOnResponseFileException()
+        {
+            string[] args = { "@FileDoesNotExist.rsp" };
+            var mockOutput = new MockOutput();
+
+            var exitCode = new Executor(mockOutput, this.mockTestPlatformEventSource.Object).Execute(args);
+
+            var errorMessageCount = mockOutput.Messages.Count(msg => msg.Level == OutputLevel.Error && msg.Message.Contains(
+            string.Format(CultureInfo.CurrentCulture, CommandLineResources.OpenResponseFileError, args[0].Substring(1))));
+            Assert.AreEqual(1, errorMessageCount, "Response File Exception should display error.");
+            Assert.AreEqual(1, exitCode, "Response File Exception execution should exit with error.");
+        }
+
+        [TestMethod]
+        public void ExecuteShouldNotThrowSettingsExceptionButLogOutput()
+        {
+            var activeRunSetting = RunSettingsManager.Instance.ActiveRunSettings;
+            var runSettingsFile = Path.Combine(Path.GetTempPath(), "ExecutorShouldShowRightErrorMessage.runsettings");
+
+            try
+            {
+                if (File.Exists(runSettingsFile))
+                {
+                    File.Delete(runSettingsFile);
+                }
+
+                var fileContents = @"<RunSettings>
+                                    <LoggerRunSettings>
+                                        <Loggers>
+                                            <Logger invalidName=""trx"" />
+                                        </Loggers>
+                                    </LoggerRunSettings>
+                                </RunSettings>";
+
+                File.WriteAllText(runSettingsFile, fileContents);
+
+                string[] args = { "/settings:" + runSettingsFile };
+                var mockOutput = new MockOutput();
+
+                var exitCode = new Executor(mockOutput, this.mockTestPlatformEventSource.Object).Execute(args);
+
+                var result = mockOutput.Messages.Any(o => o.Level == OutputLevel.Error && o.Message.Contains("Invalid settings 'Logger'. Unexpected XmlAttribute: 'invalidName'."));
+                Assert.IsTrue(result, "expecting error message : Invalid settings 'Logger'.Unexpected XmlAttribute: 'invalidName'.");
+            }
+            finally
+            {
+                File.Delete(runSettingsFile);
+                RunSettingsManager.Instance.SetActiveRunSettings(activeRunSetting);
+            }
+        }
+
+        [TestMethod]
+        public void ExecuteShouldReturnNonZeroExitCodeIfSettingsException()
+        {
+            var activeRunSetting = RunSettingsManager.Instance.ActiveRunSettings;
+            var runSettingsFile = Path.Combine(Path.GetTempPath(), "ExecutorShouldShowRightErrorMessage.runsettings");
+
+            try
+            {
+                if (File.Exists(runSettingsFile))
+                {
+                    File.Delete(runSettingsFile);
+                }
+
+                var fileContents = @"<RunSettings>
+                                    <LoggerRunSettings>
+                                        <Loggers>
+                                            <Logger invalidName=""trx"" />
+                                        </Loggers>
+                                    </LoggerRunSettings>
+                                </RunSettings>";
+
+                File.WriteAllText(runSettingsFile, fileContents);
+
+                string[] args = { "/settings:" + runSettingsFile };
+                var mockOutput = new MockOutput();
+
+                var exitCode = new Executor(mockOutput, this.mockTestPlatformEventSource.Object).Execute(args);
+
+                Assert.AreEqual(1, exitCode, "Exit code should be one because it throws exception");
+            }
+            finally
+            {
+                File.Delete(runSettingsFile);
+                RunSettingsManager.Instance.SetActiveRunSettings(activeRunSetting);
+            }
+        }
+
+        [TestMethod]
+        public void ExecutorShouldShowRightErrorMessage()
+        {
+            var activeRunSetting = RunSettingsManager.Instance.ActiveRunSettings;
+            var runSettingsFile = Path.Combine(Path.GetTempPath(), "ExecutorShouldShowRightErrorMessage.runsettings");
+
+            try
+            {
+                if (File.Exists(runSettingsFile))
+                {
+                    File.Delete(runSettingsFile);
+                }
+
+                var fileContents = @"<RunSettings>
+                                    <RunConfiguration>
+                                        <TargetPlatform>Invalid</TargetPlatform>
+                                    </RunConfiguration>
+                                </RunSettings>";
+
+                File.WriteAllText(runSettingsFile, fileContents);
+
+                string[] args = { "/settings:" + runSettingsFile };
+                var mockOutput = new MockOutput();
+
+                var exitCode = new Executor(mockOutput, this.mockTestPlatformEventSource.Object).Execute(args);
+
+                var result = mockOutput.Messages.Any(o => o.Level == OutputLevel.Error && o.Message.Contains("Invalid setting 'RunConfiguration'. Invalid value 'Invalid' specified for 'TargetPlatform'."));
+                Assert.AreEqual(1, exitCode, "Exit code should be one because it throws exception");
+                Assert.IsTrue(result, "expecting error message : Invalid setting 'RunConfiguration'. Invalid value 'Invalid' specified for 'TargetPlatform'.");
+            }
+            finally
+            {
+                File.Delete(runSettingsFile);
+                RunSettingsManager.Instance.SetActiveRunSettings(activeRunSetting);
+            }
+        }
 
         private class MockOutput : IOutput
         {

@@ -11,6 +11,9 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
     using Microsoft.VisualStudio.TestPlatform.Client.DesignMode;
     using Microsoft.VisualStudio.TestPlatform.Client.RequestHelper;
     using Microsoft.VisualStudio.TestPlatform.CommandLine;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel;
+    using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions;
+    using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions.Interfaces;
 
     using TestPlatformHelpers;
 
@@ -59,7 +62,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
             {
                 if (this.executor == null)
                 {
-                    this.executor = new Lazy<IArgumentExecutor>(() => 
+                    this.executor = new Lazy<IArgumentExecutor>(() =>
                     new PortArgumentExecutor(CommandLineOptions.Instance, TestRequestManager.Instance));
                 }
 
@@ -81,7 +84,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
 
         public override bool IsAction => false;
 
-        public override ArgumentProcessorPriority Priority => ArgumentProcessorPriority.Normal;
+        public override ArgumentProcessorPriority Priority => ArgumentProcessorPriority.DesignMode;
 
         public override string HelpContentResourceName => CommandLineResources.PortArgumentHelp;
 
@@ -108,12 +111,17 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
         /// <summary>
         /// Initializes Design mode when called
         /// </summary>
-        private Func<int, IDesignModeClient> designModeInitializer;
+        private Func<int, IProcessHelper, IDesignModeClient> designModeInitializer;
 
         /// <summary>
         /// IDesignModeClient
         /// </summary>
         private IDesignModeClient designModeClient;
+
+        /// <summary>
+        /// Process helper for process management actions.
+        /// </summary>
+        private IProcessHelper processHelper;
 
         #endregion
 
@@ -127,19 +135,28 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
         /// </param>
         /// <param name="testRequestManager"> Test request manager</param>
         public PortArgumentExecutor(CommandLineOptions options, ITestRequestManager testRequestManager)
-            : this(options, testRequestManager, InitializeDesignMode)
+            : this(options, testRequestManager, InitializeDesignMode, new ProcessHelper())
         {
         }
 
         /// <summary>
         /// For Unit testing only
         /// </summary>
-        internal PortArgumentExecutor(CommandLineOptions options, ITestRequestManager testRequestManager, Func<int, IDesignModeClient> designModeInitializer)
+        internal PortArgumentExecutor(CommandLineOptions options, ITestRequestManager testRequestManager, IProcessHelper processHelper)
+            : this(options, testRequestManager, InitializeDesignMode, processHelper)
+        {
+        }
+
+        /// <summary>
+        /// For Unit testing only
+        /// </summary>
+        internal PortArgumentExecutor(CommandLineOptions options, ITestRequestManager testRequestManager, Func<int, IProcessHelper, IDesignModeClient> designModeInitializer, IProcessHelper processHelper)
         {
             Contract.Requires(options != null);
             this.commandLineOptions = options;
             this.testRequestManager = testRequestManager;
             this.designModeInitializer = designModeInitializer;
+            this.processHelper = processHelper;
         }
 
         #endregion
@@ -152,20 +169,20 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
         /// <param name="argument">Argument that was provided with the command.</param>
         public void Initialize(string argument)
         {
-            int portNumber;
-            if (string.IsNullOrWhiteSpace(argument) || !int.TryParse(argument, out portNumber))
+            if (string.IsNullOrWhiteSpace(argument) || !int.TryParse(argument, out int portNumber))
             {
                 throw new CommandLineException(CommandLineResources.InvalidPortArgument);
             }
 
             this.commandLineOptions.Port = portNumber;
-            this.designModeClient = this.designModeInitializer?.Invoke(this.commandLineOptions.ParentProcessId);
+            this.commandLineOptions.IsDesignMode = true;
+            this.designModeClient = this.designModeInitializer?.Invoke(this.commandLineOptions.ParentProcessId, this.processHelper);
         }
 
         /// <summary>
-        /// The port is already set, return success.
+        /// Initialize the design mode client.
         /// </summary>
-        /// <returns> The <see cref="ArgumentProcessorResult"/> Success </returns>
+        /// <returns> The <see cref="ArgumentProcessorResult.Success"/> if initialization is successful. </returns>
         public ArgumentProcessorResult Execute()
         {
             try
@@ -182,16 +199,15 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
 
         #endregion
 
-        private static IDesignModeClient InitializeDesignMode(int parentProcessId)
+        private static IDesignModeClient InitializeDesignMode(int parentProcessId, IProcessHelper processHelper)
         {
             if (parentProcessId > 0)
             {
-                var process = Process.GetProcessById(parentProcessId);
-                if (process != null && !process.HasExited)
+                processHelper.SetExitCallback(parentProcessId, (obj) =>
                 {
-                    process.EnableRaisingEvents = true;
-                    process.Exited += (sender, e) => DesignModeClient.Instance?.HandleParentProcessExit();
-                }
+                    EqtTrace.Info($"PortArgumentProcessor: parent process:{parentProcessId} exited.");
+                    DesignModeClient.Instance?.HandleParentProcessExit();
+                });
             }
 
             DesignModeClient.Initialize();

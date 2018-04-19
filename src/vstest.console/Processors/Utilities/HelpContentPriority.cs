@@ -128,6 +128,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
         EnableCodeCoverageArgumentProcessorHelpPriority,
 
         /// <summary>
+        /// CollectArgumentProcessor Help
+        /// </summary>
+        CollectArgumentProcessorHelpPriority,
+
+        /// <summary>
         /// InIsolationArgumentProcessor Help
         /// </summary>
         InIsolationArgumentProcessorHelpPriority,
@@ -160,6 +165,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
         /// <summary>
         /// ListSettingProviderArgumentProcessor Help
         /// </summary>
-        ListSettingsProvidersArgumentProcessorHelpPriority
+        ListSettingsProvidersArgumentProcessorHelpPriority,
+
+        /// <summary>
+        /// ResponseFileArgumentProcessor Help
+        /// </summary>
+        ResponseFileArgumentProcessorHelpPriority,
     }
 }

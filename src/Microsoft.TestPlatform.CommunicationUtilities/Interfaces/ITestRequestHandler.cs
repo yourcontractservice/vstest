@@ -3,6 +3,7 @@
 
 namespace Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Interfaces
 {
+    using System;
     using System.Collections.Generic;
 
     using Microsoft.VisualStudio.TestPlatform.ObjectModel;
@@ -13,13 +14,17 @@ namespace Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Interfaces
     /// <summary>
     /// Defines the contract for handling test platform requests
     /// </summary>
-    public interface ITestRequestHandler
+    public interface ITestRequestHandler : IDisposable
     {
+        /// <summary>
+        /// Gets or sets connection info for to start server/client.
+        /// </summary>
+        TestHostConnectionInfo ConnectionInfo { get; set; }
+
         /// <summary>
         /// Setups client based on port
         /// </summary>
-        /// <param name="port">port number to connect</param>
-        void InitializeCommunication(int port);
+        void InitializeCommunication();
 
         /// <summary>
         /// Waits for Request Handler to connect to Request Sender
@@ -70,10 +75,9 @@ namespace Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Interfaces
         /// <summary>
         /// The discovery complete handler
         /// </summary>
-        /// <param name="totalTests"> The total Tests. </param>
+        /// <param name="discoveryCompleteEventArgs">Discovery Compelete Event Args</param>
         /// <param name="lastChunk"> The last Chunk. </param>
-        /// <param name="isAborted"> The is Aborted. </param>
-        void DiscoveryComplete(long totalTests, IEnumerable<TestCase> lastChunk, bool isAborted);
+        void DiscoveryComplete(DiscoveryCompleteEventArgs discoveryCompleteEventArgs, IEnumerable<TestCase> lastChunk);
 
         /// <summary>
         /// Launches a process with a given process info under debugger

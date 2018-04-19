@@ -5,13 +5,16 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.DataCollection.Int
 {
     using System.Collections.Generic;
 
-    using Microsoft.VisualStudio.TestPlatform.ObjectModel;
-
     /// <summary>
     /// The DataCollectionLauncher interface.
     /// </summary>
     internal interface IDataCollectionLauncher
     {
+        /// <summary>
+        /// Gets the data collector process id
+        /// </summary>
+        int DataCollectorProcessId { get; }
+
         /// <summary>
         /// The launch data collector.
         /// </summary>
@@ -25,13 +28,5 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.DataCollection.Int
         /// The <see cref="int"/>.
         /// </returns>
         int LaunchDataCollector(IDictionary<string, string> environmentVariables, IList<string> commandLineArguments);
-
-        /// <summary>
-        /// The initialize.
-        /// </summary>
-        /// <param name="architecture">
-        /// The architecture.
-        /// </param>
-        void Initialize(Architecture architecture);
     }
 }

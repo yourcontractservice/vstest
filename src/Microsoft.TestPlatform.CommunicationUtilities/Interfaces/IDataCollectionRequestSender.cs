@@ -5,8 +5,10 @@ namespace Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.DataCollect
 {
     using System.Collections.ObjectModel;
 
-    using Microsoft.VisualStudio.TestPlatform.ObjectModel;
     using Microsoft.VisualStudio.TestPlatform.Common.DataCollection;
+    using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
 
     /// <summary>
     /// Defines contract to send test platform requests to test host
@@ -20,28 +22,51 @@ namespace Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.DataCollect
         int InitializeCommunication();
 
         /// <summary>
-        /// Waits for Request Handler to be connected 
+        /// Waits for Request Handler to be connected
         /// </summary>
         /// <param name="connectionTimeout">Time to wait for connection</param>
         /// <returns>True, if Handler is connected</returns>
         bool WaitForRequestHandlerConnection(int connectionTimeout);
 
         /// <summary>
-        /// Close the Sender 
+        /// Close the Sender
         /// </summary>
         void Close();
 
         /// <summary>
+        /// Sends the TestHostLaunched event
+        /// </summary>
+        /// <param name="testHostLaunchedPayload">
+        /// Test host launched payload
+        /// </param>
+        void SendTestHostLaunched(TestHostLaunchedPayload testHostLaunchedPayload);
+
+        /// <summary>
         /// Sends the BeforeTestRunStart event and waits for result
-        /// </summary> 
-        /// <param name="settingXml"></param>
-        /// <returns>BeforeTestRunStartResult containing environment variables</returns>
-        BeforeTestRunStartResult SendBeforeTestRunStartAndGetResult(string settingXml);
+        /// </summary>
+        /// <param name="settingXml">
+        /// Run settings for test run.
+        /// </param>
+        /// <param name="runEventsHandler">
+        /// Test message event handler for handling messages.
+        /// </param>
+        /// <returns>
+        /// BeforeTestRunStartResult containing environment variables
+        /// </returns>
+        BeforeTestRunStartResult SendBeforeTestRunStartAndGetResult(string settingXml, ITestMessageEventHandler runEventsHandler);
 
         /// <summary>
         /// Sends the AfterTestRunStart event and waits for result
         /// </summary>
-        /// <returns>DataCollector attachments</returns>
-        Collection<AttachmentSet> SendAfterTestRunStartAndGetResult();
+        /// <param name="runEventsHandler">
+        /// Test message event handler for handling messages.
+        /// </param>
+        /// <param name="isCancelled">
+        /// The value to specify whether the test run is cancelled or not.
+        /// </param>
+        /// <returns>
+        /// DataCollector attachments
+        /// </returns>
+        Collection<AttachmentSet> SendAfterTestRunStartAndGetResult(ITestMessageEventHandler runEventsHandler, bool isCancelled);
     }
 }

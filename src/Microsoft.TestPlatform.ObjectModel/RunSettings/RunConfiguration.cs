@@ -10,6 +10,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
     using System.Xml;
 
     using Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities;
+    using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions;
 
     /// <summary>
     /// Stores information about a test settings.
@@ -34,6 +35,16 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
         private Framework framework;
 
         /// <summary>
+        /// Specifies the frequency of the runStats/discoveredTests event
+        /// </summary>
+        private long batchSize;
+
+        /// <summary>
+        /// Specifies the Test Session Timeout in milliseconds
+        /// </summary>
+        private long testSessionTimeout;
+
+        /// <summary>
         /// Directory in which rocksteady/adapter should keep their run specific data. 
         /// </summary>
         private string resultsDirectory;
@@ -53,6 +64,26 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
         /// </summary>
         private bool disableParallelization;
 
+        /// <summary>
+        /// True if test run is triggered 
+        /// </summary>
+        private bool designMode;
+
+        /// <summary>
+        /// Specify to run tests in isolation
+        /// </summary>
+        private bool inIsolation;
+
+        /// <summary>
+        /// False indicates that the test adapter should not collect source information for discovered tests
+        /// </summary>
+        private bool shouldCollectSourceInformation;
+
+        /// <summary>
+        /// Gets the targetDevice IP for UWP app deployment
+        /// </summary>
+        private string targetDevice;
+
         #endregion
 
         #region Constructor
@@ -71,8 +102,15 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
             this.BinariesRoot = null;
             this.testAdaptersPaths = null;
             this.maxCpuCount = Constants.DefaultCpuCount;
+            this.batchSize = Constants.DefaultBatchSize;
+            this.testSessionTimeout = 0;
             this.disableAppDomain = false;
             this.disableParallelization = false;
+            this.designMode = false;
+            this.inIsolation = false;
+            this.shouldCollectSourceInformation = false;
+            this.targetDevice = null;
+            this.ExecutionThreadApartmentState = Constants.DefaultExecutionThreadApartmentState;
         }
 
         #endregion
@@ -118,6 +156,87 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
             {
                 this.maxCpuCount = value;
                 this.MaxCpuCountSet = true;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the frequency of the runStats/discoveredTests event. Should be non-negative integer.
+        /// </summary>
+        public long BatchSize
+        {
+            get
+            {
+                return this.batchSize;
+            }
+            set
+            {
+                this.batchSize = value;
+                this.BatchSizeSet = true;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the testSessionTimeout. Should be non-negative integer.
+        /// </summary>
+        public long TestSessionTimeout
+        {
+            get
+            {
+                return this.testSessionTimeout;
+            }
+            set
+            {
+                this.testSessionTimeout = value;
+            }
+        }
+
+        /// <summary> 
+        /// Gets or sets the design mode value.
+        /// </summary>
+        public bool DesignMode
+        {
+            get
+            {
+                return this.designMode;
+            }
+
+            set
+            {
+                this.designMode = value;
+                this.DesignModeSet = true;
+            }
+        }
+
+        /// <summary> 
+        /// Gets or sets a value indicating whether to run tests in isolation or not.
+        /// </summary>
+        public bool InIsolation
+        {
+            get
+            {
+                return this.inIsolation;
+            }
+
+            set
+            {
+                this.inIsolation = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether test adapter needs to collect source information for discovered tests
+        /// </summary>
+        public bool ShouldCollectSourceInformation
+        {
+            get
+            {
+                return (this.CollectSourceInformationSet) ? this.shouldCollectSourceInformation : this.designMode;
+            }
+
+            set
+            {
+                this.shouldCollectSourceInformation = value;
+                this.CollectSourceInformationSet = true;
             }
         }
 
@@ -171,11 +290,11 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
                 this.TargetPlatformSet = true;
             }
         }
-        
+
         /// <summary>
-        /// Gets or sets the target Framework this run is targeting. Possible values are Framework3.5|Framework4.0|Framework4.5
+        /// Gets or sets the target Framework this run is targeting.
         /// </summary>
-        public Framework TargetFrameworkVersion
+        public Framework TargetFramework
         {
             get
             {
@@ -186,6 +305,54 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
             {
                 this.framework = value;
                 this.TargetFrameworkSet = true;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the target Framework this run is targeting. Possible values are Framework3.5|Framework4.0|Framework4.5
+        /// </summary>
+        [Obsolete("Use TargetFramework instead")]
+        public FrameworkVersion TargetFrameworkVersion
+        {
+            get
+            {
+                switch(this.framework?.Name)
+                {
+                    case Constants.DotNetFramework35:
+                        return FrameworkVersion.Framework35;
+                    case Constants.DotNetFramework40:
+                        return FrameworkVersion.Framework40;
+                    case Constants.DotNetFramework45:
+                        return FrameworkVersion.Framework45;
+                    case Constants.DotNetFrameworkCore10:
+                        return FrameworkVersion.FrameworkCore10;
+                    case Constants.DotNetFrameworkUap10:
+                        return FrameworkVersion.FrameworkUap10;
+                    default:
+                        return Constants.DefaultFramework;
+                }
+            }
+
+            set
+            {
+                this.framework = Framework.FromString(value.ToString());
+                this.TargetFrameworkSet = true;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the target device IP. For Phone this value is Device, for emulators "Mobile Emulator 10.0.15063.0 WVGA 4 inch 1GB"
+        /// </summary>
+        public string TargetDevice
+        {
+            get
+            {
+                return this.targetDevice;
+            }
+
+            set
+            {
+                this.targetDevice = value;
             }
         }
 
@@ -208,6 +375,16 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
                     this.TestAdaptersPathsSet = true;
                 }
             }
+        }
+
+        /// <summary>
+        /// Gets or sets the execution thread apartment state.
+        /// </summary>
+        [CLSCompliant(false)]
+        public PlatformApartmentState ExecutionThreadApartmentState
+        {
+            get;
+            set;
         }
 
         /// <summary>
@@ -238,14 +415,31 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
         }
 
         /// <summary>
-        /// Gets a value indicating whether app domain needs to be disabled by the adapters.
+        /// Gets a value indicating batch size is set
+        /// </summary>
+        public bool BatchSizeSet
+        {
+            get;
+            private set;
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether design mode is set.
+        /// </summary>
+        public bool DesignModeSet
+        {
+            get;
+            private set;
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether disable appdomain is set.
         /// </summary>
         public bool DisableAppDomainSet
         {
             get;
             private set;
         }
-
 
         /// <summary>
         /// Gets a value indicating whether parallelism needs to be disabled by the adapters.
@@ -288,8 +482,13 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
         /// </summary>
         public string BinariesRoot { get; private set; }
 
+        /// <summary>
+        /// Collect source information
+        /// </summary>
+        public bool CollectSourceInformationSet { get; private set; } = false;
+
         #endregion
-        
+
         /// <inheritdoc/>
         [SuppressMessage("Microsoft.Security.Xml", "CA3053:UseXmlSecureResolver",
             Justification = "XmlDocument.XmlResolver is not available in core. Suppress until fxcop issue is fixed.")]
@@ -311,6 +510,26 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
             maxCpuCount.InnerXml = this.MaxCpuCount.ToString();
             root.AppendChild(maxCpuCount);
 
+            XmlElement batchSize = doc.CreateElement("BatchSize");
+            batchSize.InnerXml = this.BatchSize.ToString();
+            root.AppendChild(batchSize);
+
+            XmlElement testSessionTimeout = doc.CreateElement("TestSessionTimeout");
+            testSessionTimeout.InnerXml = this.TestSessionTimeout.ToString();
+            root.AppendChild(testSessionTimeout);
+
+            XmlElement designMode = doc.CreateElement("DesignMode");
+            designMode.InnerXml = this.DesignMode.ToString();
+            root.AppendChild(designMode);
+
+            XmlElement inIsolation = doc.CreateElement("InIsolation");
+            inIsolation.InnerXml = this.InIsolation.ToString();
+            root.AppendChild(inIsolation);
+
+            XmlElement collectSourceInformation = doc.CreateElement("CollectSourceInformation");
+            collectSourceInformation.InnerXml = this.ShouldCollectSourceInformation.ToString();
+            root.AppendChild(collectSourceInformation);
+
             XmlElement disableAppDomain = doc.CreateElement("DisableAppDomain");
             disableAppDomain.InnerXml = this.DisableAppDomain.ToString();
             root.AppendChild(disableAppDomain);
@@ -320,8 +539,12 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
             root.AppendChild(disableParallelization);
 
             XmlElement targetFrameworkVersion = doc.CreateElement("TargetFrameworkVersion");
-            targetFrameworkVersion.InnerXml = this.TargetFrameworkVersion.ToString();
+            targetFrameworkVersion.InnerXml = this.TargetFramework.ToString();
             root.AppendChild(targetFrameworkVersion);
+
+            XmlElement executionThreadApartmentState = doc.CreateElement("ExecutionThreadApartmentState");
+            executionThreadApartmentState.InnerXml = this.ExecutionThreadApartmentState.ToString();
+            root.AppendChild(executionThreadApartmentState);
 
             if (this.TestAdaptersPaths != null)
             {
@@ -341,9 +564,16 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
                 root.AppendChild(binariesRoot);
             }
 
+            if(!string.IsNullOrEmpty(this.TargetDevice))
+            {
+                XmlElement targetDevice = doc.CreateElement("TargetDevice");
+                targetDevice.InnerXml = this.TargetDevice;
+                root.AppendChild(targetDevice);
+            }
+
             return root;
         }
-        
+
         /// <summary>
         /// Loads RunConfiguration from XmlReader.
         /// </summary>
@@ -371,6 +601,20 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
                             runConfiguration.ResultsDirectory = reader.ReadElementContentAsString();
                             break;
 
+                        case "CollectSourceInformation":
+                            XmlRunSettingsUtilities.ThrowOnHasAttributes(reader);
+                            string collectSourceInformationStr = reader.ReadElementContentAsString();
+
+                            bool bCollectSourceInformation = true;
+                            if (!bool.TryParse(collectSourceInformationStr, out bCollectSourceInformation))
+                            {
+                                throw new SettingsException(String.Format(CultureInfo.CurrentCulture,
+                                    Resources.Resources.InvalidSettingsIncorrectValue, Constants.RunConfigurationSettingsName, bCollectSourceInformation, elementName));
+                            }
+
+                            runConfiguration.ShouldCollectSourceInformation = bCollectSourceInformation;
+                            break;
+
                         case "MaxCpuCount":
                             XmlRunSettingsUtilities.ThrowOnHasAttributes(reader);
 
@@ -388,6 +632,70 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
                             }
 
                             runConfiguration.MaxCpuCount = count;
+                            break;
+
+                        case "BatchSize":
+                            XmlRunSettingsUtilities.ThrowOnHasAttributes(reader);
+
+                            string batchSize = reader.ReadElementContentAsString();
+                            long size;
+                            if (!long.TryParse(batchSize, out size) || size < 0)
+                            {
+                                throw new SettingsException(
+                                    string.Format(
+                                        CultureInfo.CurrentCulture,
+                                        Resources.Resources.InvalidSettingsIncorrectValue,
+                                        Constants.RunConfigurationSettingsName,
+                                        batchSize,
+                                        elementName));
+                            }
+
+                            runConfiguration.BatchSize = size;
+                            break;
+
+                        case "TestSessionTimeout":
+                            XmlRunSettingsUtilities.ThrowOnHasAttributes(reader);
+
+                            string testSessionTimeout = reader.ReadElementContentAsString();
+                            long sessionTimeout;
+                            if (!long.TryParse(testSessionTimeout, out sessionTimeout) || sessionTimeout < 0)
+                            {
+                                throw new SettingsException(
+                                    string.Format(
+                                        CultureInfo.CurrentCulture,
+                                        Resources.Resources.InvalidSettingsIncorrectValue,
+                                        Constants.RunConfigurationSettingsName,
+                                        testSessionTimeout,
+                                        elementName));
+                            }
+
+                            runConfiguration.TestSessionTimeout = sessionTimeout;
+                            break;
+
+                        case "DesignMode":
+                            XmlRunSettingsUtilities.ThrowOnHasAttributes(reader);
+
+                            string designModeValueString = reader.ReadElementContentAsString();
+                            bool designMode;
+                            if (!bool.TryParse(designModeValueString, out designMode))
+                            {
+                                throw new SettingsException(String.Format(CultureInfo.CurrentCulture,
+                                    Resources.Resources.InvalidSettingsIncorrectValue, Constants.RunConfigurationSettingsName, designModeValueString, elementName));
+                            }
+                            runConfiguration.DesignMode = designMode;
+                            break;
+
+                        case "InIsolation":
+                            XmlRunSettingsUtilities.ThrowOnHasAttributes(reader);
+
+                            string inIsolationValueString = reader.ReadElementContentAsString();
+                            bool inIsolation;
+                            if (!bool.TryParse(inIsolationValueString, out inIsolation))
+                            {
+                                throw new SettingsException(String.Format(CultureInfo.CurrentCulture,
+                                    Resources.Resources.InvalidSettingsIncorrectValue, Constants.RunConfigurationSettingsName, inIsolationValueString, elementName));
+                            }
+                            runConfiguration.InIsolation = inIsolation;
                             break;
 
                         case "DisableAppDomain":
@@ -468,7 +776,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
                                     Resources.Resources.InvalidSettingsIncorrectValue, Constants.RunConfigurationSettingsName, value, elementName));
                             }
 
-                            runConfiguration.TargetFrameworkVersion = frameworkType;
+                            runConfiguration.TargetFramework = frameworkType;
                             break;
 
                         case "TestAdaptersPaths":
@@ -523,13 +831,43 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
                             runConfiguration.BinariesRoot = reader.ReadElementContentAsString();
                             break;
 
+                        case "ExecutionThreadApartmentState":
+                            XmlRunSettingsUtilities.ThrowOnHasAttributes(reader);
+                            string executionThreadApartmentState = reader.ReadElementContentAsString();
+                            PlatformApartmentState apartmentState;
+                            if (!Enum.TryParse(executionThreadApartmentState, out apartmentState))
+                            {
+                                throw new SettingsException(
+                                    string.Format(
+                                        CultureInfo.CurrentCulture,
+                                        Resources.Resources.InvalidSettingsIncorrectValue,
+                                        Constants.RunConfigurationSettingsName,
+                                        executionThreadApartmentState,
+                                        elementName));
+                            }
+
+                            runConfiguration.ExecutionThreadApartmentState = apartmentState;
+                            break;
+
+                        case "TargetDevice":
+                            XmlRunSettingsUtilities.ThrowOnHasAttributes(reader);
+                            runConfiguration.TargetDevice = reader.ReadElementContentAsString();
+                            break;
+
                         default:
-                            throw new SettingsException(
-                                string.Format(
-                                    CultureInfo.CurrentCulture,
-                                    Resources.Resources.InvalidSettingsXmlElement,
-                                    Constants.RunConfigurationSettingsName,
-                                    reader.Name));
+                            // Ignore a runsettings element that we don't understand. It could occur in the case
+                            // the test runner is of a newer version, but the test host is of an earlier version.
+                            if (EqtTrace.IsErrorEnabled)
+                            {
+                                EqtTrace.Warning(
+                                    string.Format(
+                                        CultureInfo.CurrentCulture,
+                                        Resources.Resources.InvalidSettingsXmlElement,
+                                        Constants.RunConfigurationSettingsName,
+                                        reader.Name));
+                            }
+                            reader.Skip();
+                            break;
                     }
                 }
 

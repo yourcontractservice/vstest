@@ -18,16 +18,42 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests.Processors
     [TestClass]
     public class EnableDiagArgumentProcessorTests
     {
-        private string dummyFilePath = Path.Combine(Path.DirectorySeparatorChar.ToString(), "tmp", "foo.txt");
+        private string dummyFilePath = Path.Combine(Path.DirectorySeparatorChar.ToString(), $"{System.Guid.NewGuid()}", $"{System.Guid.NewGuid()}.txt");
 
         private readonly EnableDiagArgumentProcessor diagProcessor;
 
         private readonly Mock<IFileHelper> mockFileHelper;
 
+        private TraceLevel traceLevel;
+        private string traceFileName;
+
         public EnableDiagArgumentProcessorTests()
         {
             this.mockFileHelper = new Mock<IFileHelper>();
             this.diagProcessor = new TestableEnableDiagArgumentProcessor(this.mockFileHelper.Object);
+
+            // Saving the EqtTrace state
+#if NET451
+            traceLevel = EqtTrace.TraceLevel;
+            EqtTrace.TraceLevel = TraceLevel.Off;
+#else
+            traceLevel = (TraceLevel)EqtTrace.TraceLevel;
+            EqtTrace.TraceLevel = (PlatformTraceLevel)TraceLevel.Off;
+#endif
+
+            traceFileName = EqtTrace.LogFile;
+        }
+
+        [TestCleanup]
+        public void Cleanup()
+        {
+            // Restoring to initial state for EqtTrace
+            EqtTrace.InitializeVerboseTrace(traceFileName);
+#if NET451
+            EqtTrace.TraceLevel = traceLevel;
+#else
+            EqtTrace.TraceLevel = (PlatformTraceLevel)traceLevel;
+#endif
         }
 
         [TestMethod]
@@ -52,12 +78,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests.Processors
         }
 
         [TestMethod]
-        public void EnableDiagArgumentProcessorExecutorThrowsIfFileIsReadOnly()
+        public void EnableDiagArgumentProcessorExecutorDoesNotThrowsIfFileDotOpenThrow()
         {
-            this.mockFileHelper.Setup(fh => fh.Exists(this.dummyFilePath)).Returns(true);
-            this.mockFileHelper.Setup(fh => fh.GetFileAttributes(this.dummyFilePath)).Returns(FileAttributes.ReadOnly);
+            this.mockFileHelper.Setup(fh => fh.DirectoryExists(Path.GetDirectoryName(this.dummyFilePath))).Returns(true);
 
-            Assert.ThrowsException<CommandLineException>(() => this.diagProcessor.Executor.Value.Initialize(this.dummyFilePath));
+            this.diagProcessor.Executor.Value.Initialize(this.dummyFilePath);
         }
 
         [TestMethod]
@@ -70,7 +95,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests.Processors
         public void EnableDiagArgumentProcessorExecutorShouldCreateDirectoryOfLogFileIfNotExists()
         {
             this.mockFileHelper.Setup(fh => fh.DirectoryExists(Path.GetDirectoryName(this.dummyFilePath))).Returns(false);
-            
+
             this.diagProcessor.Executor.Value.Initialize(this.dummyFilePath);
 
             this.mockFileHelper.Verify(fh => fh.CreateDirectory(Path.GetDirectoryName(this.dummyFilePath)), Times.Once);
@@ -85,12 +110,17 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests.Processors
         }
 
         [TestMethod]
-        public void EnableDiagArgumentProcessorExecutorShouldEnableVerboseLogging()
+        public void EnableDiagArgumentProcessorExecutorShouldDisableVerboseLoggingIfEqtTraceThowException()
         {
+            this.mockFileHelper.Setup(fh => fh.DirectoryExists(Path.GetDirectoryName(this.dummyFilePath))).Returns(true);
             this.diagProcessor.Executor.Value.Initialize(this.dummyFilePath);
-            
-            Assert.IsTrue(EqtTrace.IsVerboseEnabled);
+
+            Assert.IsTrue(!EqtTrace.IsVerboseEnabled);
+#if NET451
             EqtTrace.TraceLevel = TraceLevel.Off;
+#else
+            EqtTrace.TraceLevel = PlatformTraceLevel.Off;
+#endif
         }
 
         private class TestableEnableDiagArgumentProcessor : EnableDiagArgumentProcessor

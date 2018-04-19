@@ -71,11 +71,47 @@ namespace Microsoft.VisualStudio.TestPlatform.Common.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Diagnostic data adapter &apos;{0}&apos; failed to provide intialization information. Error: {1}.
+        /// </summary>
+        internal static string DataCollectorErrorOnGetVariable {
+            get {
+                return ResourceManager.GetString("DataCollectorErrorOnGetVariable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The diagnostic data adapter &apos;{0}&apos;  threw an exception during type loading, construction, or initialization: {1}..
+        /// </summary>
+        internal static string DataCollectorInitializationError {
+            get {
+                return ResourceManager.GetString("DataCollectorInitializationError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Diagnostic data adapter (&apos;{0}&apos;) message: {1}..
         /// </summary>
         internal static string DataCollectorMessageFormat {
             get {
                 return ResourceManager.GetString("DataCollectorMessageFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Could not find diagnostic data adapter of type &apos;{0}&apos; and Uri &apos;{1}&apos;.
+        /// </summary>
+        internal static string DataCollectorNotFound {
+            get {
+                return ResourceManager.GetString("DataCollectorNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to The diagnostic data adapter &apos;{0}&apos; requested environment variable &apos;{1}&apos; with value &apos;{2}&apos; to be set in test execution environment, but another diagnostic data adapter &apos;{3}&apos; has already requested same environment variable with different value &apos;{4}&apos;..
+        /// </summary>
+        internal static string DataCollectorRequestedDuplicateEnvironmentVariable {
+            get {
+                return ResourceManager.GetString("DataCollectorRequestedDuplicateEnvironmentVariable", resourceCulture);
             }
         }
         
@@ -114,6 +150,35 @@ namespace Microsoft.VisualStudio.TestPlatform.Common.Resources {
                 return ResourceManager.GetString("EmptyParenthesis", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to find the list of installed unit test extensions. Reason: {0}.
+        /// </summary>
+        internal static string FailedToFindInstalledUnitTestExtensions {
+            get {
+                return ResourceManager.GetString("FailedToFindInstalledUnitTestExtensions", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to An error occured while creating Fast filter..
+        /// </summary>
+        internal static string FastFilterException
+        {
+            get
+            {
+                return ResourceManager.GetString("FastFilterException", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to There are multiple configurations that have diagnostic data adapter  type &apos;{0}&apos; or Uri &apos;{1}&apos;. Duplicate configurations will be ignored in the test run..
+        /// </summary>
+        internal static string IgnoredDuplicateConfiguration {
+            get {
+                return ResourceManager.GetString("IgnoredDuplicateConfiguration", resourceCulture);
+            }
+        }
         
         /// <summary>
         ///   Looks up a localized string similar to Error: Invalid Condition &apos;{0}&apos;.
@@ -141,25 +206,36 @@ namespace Microsoft.VisualStudio.TestPlatform.Common.Resources {
                 return ResourceManager.GetString("InvalidOperator", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Looks up a localized string similar to Exception occurred while initializing logger with URI &apos;{0}&apos;.  The logger will not be used.  Exception: {1}.
+        ///   Looks up a localized string similar to Exception occurred while initializing logger with {0}: &apos;{1}&apos;.  The logger will not be used.  Exception: {2}.
         /// </summary>
         internal static string LoggerInitializationError {
             get {
                 return ResourceManager.GetString("LoggerInitializationError", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Looks up a localized string similar to Could not find a test logger with URI or FriendlyName &apos;{0}&apos;..
+        ///   Looks up a localized string similar to Could not find a test logger with AssemblyQualifiedName, URI or FriendlyName &apos;{0}&apos;..
         /// </summary>
         internal static string LoggerNotFound {
             get {
                 return ResourceManager.GetString("LoggerNotFound", resourceCulture);
             }
         }
-        
+
+        /// <summary>
+        ///   Looks up a localized string similar to The Test Logger URI &apos;{0}&apos; is not valid.  The Test Logger will be ignored..
+        /// </summary>
+        public static string LoggerUriInvalid
+        {
+            get
+            {
+                return ResourceManager.GetString("LoggerUriInvalid", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to Error: Missing &apos;)&apos;.
         /// </summary>
@@ -193,6 +269,15 @@ namespace Microsoft.VisualStudio.TestPlatform.Common.Resources {
         internal static string MissingOperator {
             get {
                 return ResourceManager.GetString("MissingOperator", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Diagnostic data adapter caught an exception of type &apos;{0}&apos;: &apos;{1}&apos;. More details: {2}..
+        /// </summary>
+        internal static string ReportDataCollectorException {
+            get {
+                return ResourceManager.GetString("ReportDataCollectorException", resourceCulture);
             }
         }
         
@@ -247,6 +332,24 @@ namespace Microsoft.VisualStudio.TestPlatform.Common.Resources {
         internal static string TestCaseFilterFormatException {
             get {
                 return ResourceManager.GetString("TestCaseFilterFormatException", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to This option works only with vstest.console.exe installed as part of Visual Studio..
+        /// </summary>
+        internal static string VSInstallationNotFound {
+            get {
+                return ResourceManager.GetString("VSInstallationNotFound", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Types deriving from the data collection context cannot be used for sending data and messages.  The DataCollectionContext used for sending data and messages must come from one of the events raised to the data collector..
+        /// </summary>
+        internal static string WrongDataCollectionContextType {
+            get {
+                return ResourceManager.GetString("WrongDataCollectionContextType", resourceCulture);
             }
         }
     }

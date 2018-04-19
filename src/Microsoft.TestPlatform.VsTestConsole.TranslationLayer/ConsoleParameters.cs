@@ -3,12 +3,12 @@
 
 namespace Microsoft.TestPlatform.VsTestConsole.TranslationLayer
 {
+    using Microsoft.VisualStudio.TestPlatform.CoreUtilities.Extensions;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel;
+    using Microsoft.VisualStudio.TestPlatform.Utilities.Helpers;
+    using Microsoft.VisualStudio.TestPlatform.Utilities.Helpers.Interfaces;
     using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
     using System.IO;
-    using System.Text;
 
     /// <summary>
     /// Class which defines additional specifiable parameters for vstest.console.exe
@@ -18,7 +18,26 @@ namespace Microsoft.TestPlatform.VsTestConsole.TranslationLayer
         internal static readonly ConsoleParameters Default = new ConsoleParameters();
 
         private string logFilePath = null;
+        private IFileHelper fileHelper;
 
+        /// <summary>
+        /// Create instance of <see cref="ConsoleParameters"/>
+        /// </summary>
+        public ConsoleParameters() : this(new FileHelper())
+        { }
+
+        /// <summary>
+        /// Create instance of <see cref="ConsoleParameters"/>
+        /// </summary>
+        /// <param name="fileHelper"> Object of type <see cref="IFileHelper"/></param>
+        public ConsoleParameters(IFileHelper fileHelper)
+        {
+            this.fileHelper = fileHelper;
+        }
+
+        /// <summary>
+        /// Full path for the log file
+        /// </summary>
         public string LogFilePath
         {
             get
@@ -29,12 +48,14 @@ namespace Microsoft.TestPlatform.VsTestConsole.TranslationLayer
             set
             {
                 ValidateArg.NotNullOrEmpty(value, "LogFilePath");
-                if(!Directory.Exists(Path.GetDirectoryName(value)))
+                var directoryPath = Path.GetDirectoryName(value);
+                if (!string.IsNullOrEmpty(directoryPath) && !fileHelper.DirectoryExists(Path.GetDirectoryName(value)))
                 {
                     throw new ArgumentException("LogFilePath must point to a valid directory for logging!");
                 }
 
-                this.logFilePath = value;
+                // Ensure path is double quoted. if path has white space then it can create problem.
+                this.logFilePath = value.AddDoubleQuote();
             }
         }
 

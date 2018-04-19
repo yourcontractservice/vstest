@@ -1,43 +1,23 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+
 namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors.Utilities
 {
     using System;
     using System.Collections.Generic;
-
-    using Common.Logging;
-
+    using System.Collections.ObjectModel;
     using ObjectModel;
     using ObjectModel.Logging;
 
     internal class LoggerUtilities
     {
-        internal static void RaiseTestRunError(TestLoggerManager loggerManager, TestRunResultAggregator testRunResultAggregator, Exception exception)
-        {
-            // testRunResultAggregator can be null, if error is being raised in discovery context.
-            if (null != testRunResultAggregator)
-            {
-                testRunResultAggregator.MarkTestRunFailed();
-            }
-
-            TestRunMessageEventArgs errorMessage = new TestRunMessageEventArgs(TestMessageLevel.Error, exception.Message);
-            loggerManager.SendTestRunError(errorMessage);
-
-            // Send inner exception only when its message is different to avoid duplicate.
-            if (exception is TestPlatformException && exception.InnerException != null && string.Compare(exception.Message, exception.InnerException.Message, StringComparison.CurrentCultureIgnoreCase) != 0)
-            {
-                errorMessage = new TestRunMessageEventArgs(TestMessageLevel.Error, exception.InnerException.Message);
-                loggerManager.SendTestRunError(errorMessage);
-            }
-        }
-
         /// <summary>
         /// Parses the parameters passed as name values pairs along with the logger argument.
         /// </summary>
         /// <param name="argument">Logger argument</param>
         /// <param name="loggerIdentifier">Receives logger Uri or friendly name.</param>
-        /// <param name="paramters">Receives parse name value pairs.</param>
+        /// <param name="parameters">Receives parse name value pairs.</param>
         /// <returns>True is successful, false otherwise.</returns>
         public static bool TryParseLoggerArgument(string argument, out string loggerIdentifier, out Dictionary<string, string> parameters)
         {

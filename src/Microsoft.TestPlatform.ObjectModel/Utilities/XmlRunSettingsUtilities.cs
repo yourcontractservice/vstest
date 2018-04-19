@@ -8,30 +8,17 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities
     using System.Diagnostics.CodeAnalysis;
     using System.Globalization;
     using System.IO;
-    using System.Runtime.InteropServices;
     using System.Xml;
     using System.Xml.XPath;
+
+    using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions;
+    using ObjectModelResources = Microsoft.VisualStudio.TestPlatform.ObjectModel.Resources.Resources;
 
     /// <summary>
     /// Utilities for the run settings XML.
     /// </summary>
-    public class XmlRunSettingsUtilities
+    public static class XmlRunSettingsUtilities
     {
-        /// <summary>
-        /// Friendly name of the data collector
-        /// </summary>
-        private const string FriendlyName = "UnitTestIsolation";
-
-        /// <summary>
-        /// Gets the URI of the data collector
-        /// </summary>
-        private const string DataCollectorUri = "datacollector://microsoft/unittestisolation/1.0";
-
-        /// <summary>
-        /// Gets the assembly qualified name of the data collector type
-        /// </summary>
-        private const string DataCollectorAssemblyQualifiedName = "Microsoft.VisualStudio.TraceCollector.UnitTestIsolationDataCollector, Microsoft.VisualStudio.TraceCollector, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a";
-
         /// <summary>
         /// Gets the os architecture of the machine where this application is running
         /// </summary>
@@ -39,22 +26,17 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities
         {
             get
             {
-#if NET46
-                // This is a workaround for https://github.com/dotnet/corefx/issues/13566
-                return WindowsSystemInformation.GetArchitecture();
-#else
-                var arch = RuntimeInformation.OSArchitecture;
+                var arch = new PlatformEnvironment().Architecture;
 
                 switch (arch)
                 {
-                    case Architecture.X64:
+                    case PlatformArchitecture.X64:
                         return ObjectModel.Architecture.X64;
-                    case Architecture.X86:
+                    case PlatformArchitecture.X86:
                         return ObjectModel.Architecture.X86;
                     default:
                         return ObjectModel.Architecture.ARM;
                 }
-#endif
             }
         }
 
@@ -81,12 +63,12 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities
         {
             if (runSettingDocument == null)
             {
-                throw new ArgumentNullException("runSettingDocument");
+                throw new ArgumentNullException(nameof(runSettingDocument));
             }
 
             if (dataCollectorUri == null)
             {
-                throw new ArgumentNullException("dataCollectorUri");
+                throw new ArgumentNullException(nameof(dataCollectorUri));
             }
 
             var navigator = runSettingDocument.CreateNavigator();
@@ -105,6 +87,63 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities
         }
 
         /// <summary>
+        /// Get the list of friendly name of all data collector present in runsettings.
+        /// </summary>
+        /// <param name="runsettingsXml">runsettings xml string</param>
+        /// <returns>List of friendly name</returns>
+        public static IList<string> GetDataCollectorsFriendlyName(string runsettingsXml)
+        {
+            var friendlyNameList = new List<string>();
+            if (!string.IsNullOrWhiteSpace(runsettingsXml))
+            {
+                using (var stream = new StringReader(runsettingsXml))
+                using (var reader = XmlReader.Create(stream, XmlRunSettingsUtilities.ReaderSettings))
+                {
+                    var document = new XmlDocument();
+                    document.Load(reader);
+
+                    var runSettingsNavigator = document.CreateNavigator();
+                    var nodes = runSettingsNavigator.Select("/RunSettings/DataCollectionRunSettings/DataCollectors/DataCollector");
+
+                    foreach (XPathNavigator dataCollectorNavigator in nodes)
+                    {
+                        var friendlyName = dataCollectorNavigator.GetAttribute("friendlyName", string.Empty);
+                        friendlyNameList.Add(friendlyName);
+                    }
+                }
+            }
+
+            return friendlyNameList;
+        }
+
+        /// <summary>
+        /// Inserts a data collector settings in the file
+        /// </summary>
+        /// <param name="runSettingDocument">runSettingDocument</param>
+        /// <param name="settings">settings</param>
+        public static void InsertDataCollectorsNode(IXPathNavigable runSettingDocument, DataCollectorSettings settings)
+        {
+            if (runSettingDocument == null)
+            {
+                throw new ArgumentNullException(nameof(runSettingDocument));
+            }
+
+            if (settings == null)
+            {
+                throw new ArgumentNullException(nameof(settings));
+            }
+
+            var navigator = runSettingDocument.CreateNavigator();
+            MoveToDataCollectorsNode(ref navigator);
+
+            var settingsXml = settings.ToXml();
+            var dataCollectorNode = settingsXml.CreateNavigator();
+            dataCollectorNode.MoveToRoot();
+
+            navigator.AppendChild(dataCollectorNode);
+        }
+
+        /// <summary>
         /// Returns RunConfiguration from settingsXml. 
         /// </summary>
         /// <param name="settingsXml">The run settings.</param>
@@ -117,6 +156,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities
                 // Return default one.
                 nodeValue = new RunConfiguration();
             }
+
             return nodeValue;
         }
 
@@ -134,27 +174,16 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities
                 // Return default.
                 nodeValue = new Dictionary<string, object>();
             }
+
             return nodeValue;
-        }
-
-        /// <summary>
-        /// Returns a value that indicates if the Fakes data collector is already configured  in the settings.
-        /// </summary>
-        /// <param name="runSettings">The run settings.</param>
-        /// <returns>True if the fakes data collector is enabled.</returns>
-        public static bool ContainsFakesDataCollector(IXPathNavigable runSettings)
-        {
-            if (runSettings == null)
-            {
-                throw new ArgumentNullException("runSettings");
-            }
-
-            return ContainsDataCollector(runSettings, DataCollectorUri);
         }
 
         /// <summary>
         /// Create a default run settings
         /// </summary>
+        /// <returns>
+        /// The <see cref="IXPathNavigable"/>.
+        /// </returns>
         [SuppressMessage("Microsoft.Security.Xml", "CA3053:UseXmlSecureResolver",
             Justification = "XmlReaderSettings.XmlResolver is not available in core. Suppress until fxcop issue is fixed.")]
         public static IXPathNavigable CreateDefaultRunSettings()
@@ -167,9 +196,8 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities
             //     </DataCollectors>
             //   </DataCollectionRunSettings>
             // </RunSettings>
-
             var doc = new XmlDocument();
-            var xmlDeclaration = doc.CreateNode(XmlNodeType.XmlDeclaration, "", "");
+            var xmlDeclaration = doc.CreateNode(XmlNodeType.XmlDeclaration, string.Empty, string.Empty);
 
             doc.AppendChild(xmlDeclaration);
             var runSettingsNode = doc.CreateElement(Constants.RunSettingsName);
@@ -181,10 +209,17 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities
             var dataCollectorsNode = doc.CreateElement(Constants.DataCollectorsSettingName);
             dataCollectionRunSettingsNode.AppendChild(dataCollectorsNode);
 
-#if NET46
+#if NET451
             return doc;
 #else
-            return doc.ToXPathNavigable();
+            // Xmldocument doesn't inherit from XmlDocument for netcoreapp2.0
+            var ret = doc as IXPathNavigable;
+            if (ret == null)
+            {
+                return doc.ToXPathNavigable();
+            }
+
+            return ret;
 #endif
         }
 
@@ -196,6 +231,23 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities
         public static bool IsDataCollectionEnabled(string runSettingsXml)
         {
             var dataCollectionRunSettings = GetDataCollectionRunSettings(runSettingsXml);
+
+            if (dataCollectionRunSettings == null || !dataCollectionRunSettings.IsCollectionEnabled)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Returns whether in proc data collection is enabled in the parameter settings xml or not
+        /// </summary>
+        /// <param name="runSettingsXml"> The run Settings Xml. </param>
+        /// <returns> True if data collection is enabled. </returns>
+        public static bool IsInProcDataCollectionEnabled(string runSettingsXml)
+        {
+            var dataCollectionRunSettings = GetInProcDataCollectionRunSettings(runSettingsXml);
 
             if (dataCollectionRunSettings == null || !dataCollectionRunSettings.IsCollectionEnabled)
             {
@@ -220,83 +272,36 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities
                 return null;
             }
 
-            using (var stringReader = new StringReader(runSettingsXml))
+            try
             {
-                var reader = XmlReader.Create(stringReader, ReaderSettings);
-
-                // read to the fist child
-                XmlReaderUtilities.ReadToRootNode(reader);
-                reader.ReadToNextElement();
-
-                // Read till we reach DC element or reach EOF
-                while (!string.Equals(reader.Name, Constants.DataCollectionRunSettingsName)
-                       &&
-                       !reader.EOF)
+                using (var stringReader = new StringReader(runSettingsXml))
                 {
-                    reader.SkipToNextElement();
-                }
-
-                // If reached EOF => DC element not there
-                if (reader.EOF)
-                {
-                    return null;
-                }
-
-                // Reached here => DC element present. 
-                return DataCollectionRunSettings.FromXml(reader);
-            }
-        }
-
-        /// <summary>
-        /// Throws a settings exception if the node the reader is on has attributes defined.
-        /// </summary>
-        /// <param name="reader"> The xml reader. </param>
-        internal static void ThrowOnHasAttributes(XmlReader reader)
-        {
-            if (reader.HasAttributes)
-            {
-                reader.MoveToNextAttribute();
-                throw new SettingsException(
-                    string.Format(
-                        CultureInfo.CurrentCulture,
-                        Resources.Resources.InvalidSettingsXmlAttribute,
-                        Constants.RunConfigurationSettingsName,
-                        reader.Name));
-            }
-        }
-
-        [SuppressMessage("Microsoft.Security.Xml", "CA3053:UseXmlSecureResolver",
-            Justification = "XmlReaderSettings.XmlResolver is not available in core. Suppress until fxcop issue is fixed.")]
-        private static T GetNodeValue<T>(string settingsXml, string nodeName, Func<XmlReader, T> nodeParser)
-        {
-            // use XmlReader to avoid loading of the plugins in client code (mainly from VS).
-            if (!string.IsNullOrWhiteSpace(settingsXml))
-            {
-                using (var stringReader = new StringReader(settingsXml))
-                {
-                    XmlReader reader = XmlReader.Create(stringReader, ReaderSettings);
+                    var reader = XmlReader.Create(stringReader, ReaderSettings);
 
                     // read to the fist child
                     XmlReaderUtilities.ReadToRootNode(reader);
                     reader.ReadToNextElement();
 
-                    // Read till we reach nodeName element or reach EOF
-                    while (!string.Equals(reader.Name, nodeName, StringComparison.OrdinalIgnoreCase)
-                            &&
-                            !reader.EOF)
+                    // Read till we reach DC element or reach EOF
+                    while (!string.Equals(reader.Name, Constants.DataCollectionRunSettingsName) && !reader.EOF)
                     {
                         reader.SkipToNextElement();
                     }
 
-                    if (!reader.EOF)
+                    // If reached EOF => DC element not there
+                    if (reader.EOF)
                     {
-                        // read nodeName element.
-                        return nodeParser(reader);
+                        return null;
                     }
+
+                    // Reached here => DC element present. 
+                    return DataCollectionRunSettings.FromXml(reader);
                 }
             }
-
-            return default(T);
+            catch (XmlException ex)
+            {
+                throw new SettingsException(string.Format(CultureInfo.CurrentCulture, "{0} {1}", Resources.CommonResources.MalformedRunSettingsFile, ex.Message), ex);
+            }
         }
 
         /// <summary>
@@ -310,94 +315,152 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities
             Justification = "XmlReaderSettings.XmlResolver is not available in core. Suppress until fxcop issue is fixed.")]
         public static DataCollectionRunSettings GetInProcDataCollectionRunSettings(string runSettingsXml)
         {
-            // use XmlReader to avoid loading of the plugins in client code (mainly from VS).            
-            if (!string.IsNullOrWhiteSpace(runSettingsXml))
+            // use XmlReader to avoid loading of the plugins in client code (mainly from VS).
+            if (string.IsNullOrWhiteSpace(runSettingsXml))
             {
-                runSettingsXml = runSettingsXml.Trim();
-                using (StringReader stringReader1 = new StringReader(runSettingsXml))
+                return null;
+            }
+
+            runSettingsXml = runSettingsXml.Trim();
+            using (StringReader stringReader1 = new StringReader(runSettingsXml))
+            {
+                XmlReader reader = XmlReader.Create(stringReader1, ReaderSettings);
+
+                // read to the fist child
+                XmlReaderUtilities.ReadToRootNode(reader);
+                reader.ReadToNextElement();
+
+                // Read till we reach In Proc IDC element or reach EOF
+                while (!string.Equals(reader.Name, Constants.InProcDataCollectionRunSettingsName) && !reader.EOF)
                 {
-                    XmlReader reader = XmlReader.Create(stringReader1, ReaderSettings);
+                    reader.SkipToNextElement();
+                }
 
-                    // read to the fist child
-                    XmlReaderUtilities.ReadToRootNode(reader);
-                    reader.ReadToNextElement();
+                // If reached EOF => IDC element not there
+                if (reader.EOF)
+                {
+                    return null;
+                }
 
-                    // Read till we reach In Proc IDC element or reach EOF
-                    while (!string.Equals(reader.Name, Constants.InProcDataCollectionRunSettingsName)
-                            &&
-                            !reader.EOF)
+                // Reached here => In Proc IDC element present.
+                return DataCollectionRunSettings.FromXml(reader, Constants.InProcDataCollectionRunSettingsName, Constants.InProcDataCollectorsSettingName, Constants.InProcDataCollectorSettingName);
+            }
+        }
+
+        /// <summary>
+        /// Get logger run settings from the settings XML.
+        /// </summary>
+        /// <param name="runSettings">The run Settings Xml.</param>
+        /// <returns> The <see cref="LoggerRunSettings"/>. </returns>
+        public static LoggerRunSettings GetLoggerRunSettings(String runSettings)
+        {
+            return GetNodeValue(
+                runSettings,
+                Constants.LoggerRunSettingsName,
+                LoggerRunSettings.FromXml);
+        }
+
+        /// <summary>
+        /// Throws a settings exception if the node the reader is on has attributes defined.
+        /// </summary>
+        /// <param name="reader"> The xml reader. </param>
+        internal static void ThrowOnHasAttributes(XmlReader reader)
+        {
+            if (!reader.HasAttributes) return;
+
+            string elementName = reader.Name;
+            reader.MoveToNextAttribute();
+
+            throw new SettingsException(
+                string.Format(
+                    CultureInfo.CurrentCulture,
+                    Resources.Resources.InvalidSettingsXmlAttribute,
+                    elementName,
+                    reader.Name));
+        }
+
+        /// <summary>
+        /// Throws a settings exception if the node the reader is on doesn't have attributes defined.
+        /// </summary>
+        /// <param name="reader"> The xml reader. </param>
+        internal static void ThrowOnNoAttributes(XmlReader reader)
+        {
+            if (reader.HasAttributes) return;
+
+            throw new SettingsException(
+                string.Format(
+                    CultureInfo.CurrentCulture,
+                    Resources.Resources.InvalidSettingsXmlAttribute,
+                    reader.Name));
+        }
+
+        [SuppressMessage("Microsoft.Security.Xml", "CA3053:UseXmlSecureResolver",
+            Justification = "XmlReaderSettings.XmlResolver is not available in core. Suppress until fxcop issue is fixed.")]
+        private static T GetNodeValue<T>(string settingsXml, string nodeName, Func<XmlReader, T> nodeParser)
+        {
+            // use XmlReader to avoid loading of the plugins in client code (mainly from VS).
+            if (!string.IsNullOrWhiteSpace(settingsXml))
+            {
+                try
+                {
+                    using (var stringReader = new StringReader(settingsXml))
                     {
-                        reader.SkipToNextElement();
-                    }
+                        XmlReader reader = XmlReader.Create(stringReader, ReaderSettings);
 
-                    // If reached EOF => IDC element not there
-                    if (reader.EOF)
-                    {
-                        return null;
-                    }
+                        // read to the fist child
+                        XmlReaderUtilities.ReadToRootNode(reader);
+                        reader.ReadToNextElement();
 
-                    // Reached here => In Proc IDC element present. 
-                    return DataCollectionRunSettings.FromXml(reader, Constants.InProcDataCollectionRunSettingsName, Constants.InProcDataCollectorsSettingName, Constants.InProcDataCollectorSettingName);
+                        // Read till we reach nodeName element or reach EOF
+                        while (!string.Equals(reader.Name, nodeName, StringComparison.OrdinalIgnoreCase)
+                                &&
+                                !reader.EOF)
+                        {
+                            reader.SkipToNextElement();
+                        }
+
+                        if (!reader.EOF)
+                        {
+                            // read nodeName element.
+                            return nodeParser(reader);
+                        }
+                    }
+                }
+                catch (XmlException ex)
+                {
+                    throw new SettingsException(
+                    string.Format(CultureInfo.CurrentCulture, "{0} {1}", Resources.CommonResources.MalformedRunSettingsFile, ex.Message),
+                        ex);
                 }
             }
 
-            return null;
+            return default(T);
         }
-    }
 
-#if NET46
-    internal static class WindowsSystemInformation
-    {
-        internal const ushort PROCESSOR_ARCHITECTURE_INTEL = 0;
-        internal const ushort PROCESSOR_ARCHITECTURE_ARM = 5;
-        internal const ushort PROCESSOR_ARCHITECTURE_IA64 = 6;
-        internal const ushort PROCESSOR_ARCHITECTURE_AMD64 = 9;
-        internal const ushort PROCESSOR_ARCHITECTURE_UNKNOWN = 0xFFFF;
-
-        [StructLayout(LayoutKind.Sequential)]
-        internal struct SYSTEM_INFO
+        /// <summary>
+        /// Moves the given runsettings file navigator to the DataCollectors node in the runsettings xml.
+        /// Throws XmlException if it was unable to find the DataCollectors node.
+        /// </summary>
+        /// <param name="runSettingsNavigator">XPathNavigator for a runsettings xml document.</param>
+        private static void MoveToDataCollectorsNode(ref XPathNavigator runSettingsNavigator)
         {
-            public ushort wProcessorArchitecture;
-            public ushort wReserved;
-            public uint dwPageSize;
-            public IntPtr lpMinimumApplicationAddress;
-            public IntPtr lpMaximumApplicationAddress;
-            public UIntPtr dwActiveProcessorMask;
-            public uint dwNumberOfProcessors;
-            public uint dwProcessorType;
-            public uint dwAllocationGranularity;
-            public ushort wProcessorLevel;
-            public ushort wProcessorRevision;
-        };
-
-        [DllImport("kernel32.dll")]
-        internal static extern void GetNativeSystemInfo(ref SYSTEM_INFO lpSystemInfo);
-
-        public static ObjectModel.Architecture GetArchitecture()
-        {
-            SYSTEM_INFO sysInfo = new SYSTEM_INFO();
-
-            // GetNativeSystemInfo is supported from Windows XP onwards. Since test platform
-            // requires Windows 7 OS at the minimum, we don't require a fallback.
-            GetNativeSystemInfo(ref sysInfo);
-
-            switch (sysInfo.wProcessorArchitecture)
+            runSettingsNavigator.MoveToRoot();
+            if (!runSettingsNavigator.MoveToChild("RunSettings", string.Empty))
             {
-                case PROCESSOR_ARCHITECTURE_INTEL:
-                    return ObjectModel.Architecture.X86;
-                case PROCESSOR_ARCHITECTURE_ARM:
-                    return ObjectModel.Architecture.ARM;
-                case PROCESSOR_ARCHITECTURE_IA64:
-                    return ObjectModel.Architecture.X64;
-                case PROCESSOR_ARCHITECTURE_AMD64:
-                    return ObjectModel.Architecture.X64;
-                case PROCESSOR_ARCHITECTURE_UNKNOWN:
-                    EqtTrace.Error("WindowsSystemInformation.GetArchitecture: Unknown architecture found, will use default.");
-                    break;
+                throw new XmlException(string.Format(CultureInfo.CurrentCulture, ObjectModelResources.CouldNotFindXmlNode, "RunSettings"));
             }
 
-            return ObjectModel.Architecture.Default;
+            if (!runSettingsNavigator.MoveToChild("DataCollectionRunSettings", string.Empty))
+            {
+                runSettingsNavigator.AppendChildElement(string.Empty, "DataCollectionRunSettings", string.Empty, string.Empty);
+                runSettingsNavigator.MoveToChild("DataCollectionRunSettings", string.Empty);
+            }
+
+            if (!runSettingsNavigator.MoveToChild("DataCollectors", string.Empty))
+            {
+                runSettingsNavigator.AppendChildElement(string.Empty, "DataCollectors", string.Empty, string.Empty);
+                runSettingsNavigator.MoveToChild("DataCollectors", string.Empty);
+            }
         }
     }
-#endif
 }

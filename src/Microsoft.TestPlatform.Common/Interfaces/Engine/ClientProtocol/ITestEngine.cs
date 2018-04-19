@@ -3,8 +3,8 @@
 
 namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Engine
 {
-    using Microsoft.VisualStudio.TestPlatform.Common.Interfaces;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Host;
 
     /// <summary>
     /// Defines the functionality of a test engine.
@@ -14,17 +14,22 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Engine
         /// <summary>
         /// Fetches the DiscoveryManager for this engine. This manager would provide all functionality required for discovery.
         /// </summary>
+        /// <param name="requestData">The Request Data for providing discovery services and data.</param>
         /// <param name="testHostManager">Test host manager for the current test discovery.</param>
-        /// <returns>ITestDiscoveryManager object that can do discovery</returns>
-        IProxyDiscoveryManager GetDiscoveryManager(ITestHostManager testHostManager, DiscoveryCriteria discoveryCriteria);
+        /// <param name="discoveryCriteria">The discovery Criteria.</param>
+        /// <returns>
+        /// ITestDiscoveryManager object that can do discovery
+        /// </returns>
+        IProxyDiscoveryManager GetDiscoveryManager(IRequestData requestData, ITestRuntimeProvider testHostManager, DiscoveryCriteria discoveryCriteria);
 
         /// <summary>
         /// Fetches the ExecutionManager for this engine. This manager would provide all functionality required for execution.
         /// </summary>
+        /// <param name="requestData">The request data for providing common execution services and data</param>
         /// <param name="testHostManager">Test host manager for current test run.</param>
         /// <param name="testRunCriteria">TestRunCriteria of the current test run</param>
         /// <returns>ITestExecutionManager object that can do execution</returns>
-        IProxyExecutionManager GetExecutionManager(ITestHostManager testHostManager, TestRunCriteria testRunCriteria);
+        IProxyExecutionManager GetExecutionManager(IRequestData requestData, ITestRuntimeProvider testHostManager, TestRunCriteria testRunCriteria);
 
         /// <summary>
         /// Fetches the extension manager for this engine. This manager would provide extensibility
@@ -34,11 +39,10 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Engine
         ITestExtensionManager GetExtensionManager();
 
         /// <summary>
-        /// Fetches the Test Host manager for this engine. This manager would provide extensibility
-        /// features that this engine supports.
+        /// Fetches the logger manager for this engine. This manager will provide logger extensibility features that this engine supports.
         /// </summary>
-        /// <param name="runConfiguration">RunConfiguration information which contains info like Architecture, Framework for the test run.</param>
-        /// <returns>Launcher for the test host process</returns>
-        ITestHostManager GetDefaultTestHostManager(RunConfiguration runConfiguration);
+        /// <param name="requestData">The request data for providing common execution services and data</param>
+        /// <returns>ITestLoggerManager object that helps with logger extensibility.</returns>
+        ITestLoggerManager GetLoggerManager(IRequestData requestData);
     }
 }

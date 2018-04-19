@@ -1,35 +1,53 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-using System.Threading.Tasks;
-
 namespace SampleUnitTestProject3
 {
     using Microsoft.VisualStudio.TestTools.UnitTesting;
+    using System;
+    using System.IO;
+    using System.Reflection;
+    using System.Threading;
+#if NET451
+    using System.Windows.Forms;
+#endif
 
     [TestClass]
     public class UnitTest1
     {
         [TestMethod]
-        public void PassingTest()
+        public void WorkingDirectoryTest()
         {
-            Assert.AreEqual(2, 2);
+            Assert.AreEqual(Path.GetDirectoryName(typeof(UnitTest1).GetTypeInfo().Assembly.Location), Directory.GetCurrentDirectory());
         }
 
         [TestMethod]
-        public async Task AsyncTestMethod()
+        public void ExitwithUnhandleException()
         {
-            await Task.CompletedTask;
-        }
-    }
-
-    public class Class1
-    {
-        public void OverLoadededMethod()
-        {
+            Action fail = () => throw new InvalidOperationException();
+            var thread = new Thread(new ThreadStart(fail));
+            thread.Start();
+            thread.Join();
         }
 
-        public void OverLoadededMethod(string name)
+        [TestMethod]
+        public void ExitWithStackoverFlow()
         {
+            ExitWithStackoverFlow();
         }
+
+#if NET451
+        [TestMethod]
+        public void UITestMethod()
+        {
+            Clipboard.SetText("Clipboard");
+        }
+
+        [TestMethod]
+        public void UITestWithSleep1()
+        {
+            Clipboard.SetText("Clipboard");
+            Thread.Sleep(1000 * 3);
+        }
+#endif
     }
 }

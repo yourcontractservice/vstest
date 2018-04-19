@@ -6,11 +6,12 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
     using System;
     using System.Collections.Generic;
 
+    using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Interfaces;
     using Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.DataCollection;
     using Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.DataCollection.Interfaces;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
-    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Engine;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Host;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel.Logging;
 
     /// <summary>
@@ -18,19 +19,39 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
     /// </summary>
     internal class ProxyExecutionManagerWithDataCollection : ProxyExecutionManager
     {
+        private IDictionary<string, string> dataCollectionEnvironmentVariables;
+        private int dataCollectionPort;
+        private IRequestData requestData;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ProxyExecutionManagerWithDataCollection"/> class. 
         /// </summary>
+        /// <param name="requestSender">
+        /// Test request sender instance.
+        /// </param>
         /// <param name="testHostManager">
         /// Test host manager for this operation.
         /// </param>
         /// <param name="proxyDataCollectionManager">
         /// The proxy Data Collection Manager.
         /// </param>
-        public ProxyExecutionManagerWithDataCollection(ITestHostManager testHostManager, IProxyDataCollectionManager proxyDataCollectionManager) : base(testHostManager)
+        /// <param name="requestData">
+        /// The request data for providing execution services and data.
+        /// </param>
+        public ProxyExecutionManagerWithDataCollection(IRequestData requestData, ITestRequestSender requestSender, ITestRuntimeProvider testHostManager, IProxyDataCollectionManager proxyDataCollectionManager)
+            : base(requestData, requestSender, testHostManager)
         {
             this.ProxyDataCollectionManager = proxyDataCollectionManager;
             this.DataCollectionRunEventsHandler = new DataCollectionRunEventsHandler();
+            this.requestData = requestData;
+            this.dataCollectionEnvironmentVariables = new Dictionary<string, string>();
+
+            testHostManager.HostLaunched += this.TestHostLaunchedHandler;
+        }
+
+        private void TestHostLaunchedHandler(object sender, HostProviderEventArgs e)
+        {
+            this.ProxyDataCollectionManager.TestHostLaunched(e.ProcessId);
         }
 
         /// <summary>
@@ -51,46 +72,33 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
 
         /// <summary>
         /// Ensure that the Execution component of engine is ready for execution usually by loading extensions.
+        /// <param name="skipDefaultAdapters">Skip default adapters flag.</param>
         /// </summary>
-        public override void Initialize()
+        public override void Initialize(bool skipDefaultAdapters)
         {
-            DataCollectionParameters dataCollectionParameters = null;
+            this.ProxyDataCollectionManager.Initialize();
+
             try
             {
-                dataCollectionParameters = (this.ProxyDataCollectionManager == null)
-                                               ? DataCollectionParameters.CreateDefaultParameterInstance()
-                                               : this.ProxyDataCollectionManager.BeforeTestRunStart(
+                var dataCollectionParameters = this.ProxyDataCollectionManager.BeforeTestRunStart(
                                                    resetDataCollectors: true,
                                                    isRunStartingNow: true,
                                                    runEventsHandler: this.DataCollectionRunEventsHandler);
+
+                if (dataCollectionParameters != null)
+                {
+                    this.dataCollectionEnvironmentVariables = dataCollectionParameters.EnvironmentVariables;
+                    this.dataCollectionPort = dataCollectionParameters.DataCollectionEventsPort;
+                }
             }
-            catch
+            catch (Exception)
             {
-                try
-                {
-                    // On failure in calling BeforeTestRunStart, call AfterTestRunEnd to end DataCollectionProcess
-                    if (this.ProxyDataCollectionManager != null)
-                    {
-                        this.ProxyDataCollectionManager.AfterTestRunEnd(isCanceled: true, runEventsHandler: this.DataCollectionRunEventsHandler);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // There is an issue with Data Collector, skipping data collection and continuing with test run.
-                    if (EqtTrace.IsErrorEnabled)
-                    {
-                        EqtTrace.Error("TestEngine: Error occured while communicating with DataCollection Process: {0}", ex);
-                    }
-
-                    if (EqtTrace.IsWarningEnabled)
-                    {
-                        EqtTrace.Warning("TestEngine: Skipping Data Collection");
-                    }
-                }
+                // On failure in calling BeforeTestRunStart, call AfterTestRunEnd to end DataCollectionProcess
+                this.ProxyDataCollectionManager.AfterTestRunEnd(isCanceled: true, runEventsHandler: this.DataCollectionRunEventsHandler);
+                throw;
             }
 
-            // todo : pass dataCollectionParameters.EnvironmentVariables while initializaing testhostprocess.
-            base.Initialize();
+            base.Initialize(skipDefaultAdapters);
         }
 
         /// <summary>
@@ -107,71 +115,107 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
                 currentEventHandler = new DataCollectionTestRunEventsHandler(eventHandler, this.ProxyDataCollectionManager);
             }
 
-            // Log all the exceptions that has occured while initializing DataCollectionClient
-            if (this.DataCollectionRunEventsHandler?.ExceptionMessages?.Count > 0)
+            // Log all the messages that are reported while initializing DataCollectionClient
+            if (this.DataCollectionRunEventsHandler.Messages.Count > 0)
             {
-                foreach (var message in this.DataCollectionRunEventsHandler.ExceptionMessages)
+                foreach (var message in this.DataCollectionRunEventsHandler.Messages)
                 {
-                    currentEventHandler.HandleLogMessage(TestMessageLevel.Error, message);
+                    currentEventHandler.HandleLogMessage(message.Item1, message.Item2);
                 }
+
+                this.DataCollectionRunEventsHandler.Messages.Clear();
             }
 
             return base.StartTestRun(testRunCriteria, currentEventHandler);
         }
 
         /// <inheritdoc/>
-        public override void Cancel()
+        public override void Cancel(ITestRunEventsHandler eventHandler)
         {
-            base.Cancel();
+            try
+            {
+                this.ProxyDataCollectionManager.AfterTestRunEnd(isCanceled: true, runEventsHandler: this.DataCollectionRunEventsHandler);
+            }
+            finally
+            {
+                base.Cancel(eventHandler);
+            }
         }
 
-        /// <inheritdoc/>
-        public override void Close()
+        public override int LaunchProcessWithDebuggerAttached(TestProcessStartInfo testProcessStartInfo)
         {
-            base.Close();
+            if (this.dataCollectionEnvironmentVariables != null)
+            {
+                if (testProcessStartInfo.EnvironmentVariables == null)
+                {
+                    testProcessStartInfo.EnvironmentVariables = new Dictionary<string, string>();
+                }
+
+                foreach(var envVariable in this.dataCollectionEnvironmentVariables)
+                {
+                    if (testProcessStartInfo.EnvironmentVariables.ContainsKey(envVariable.Key))
+                    {
+                        testProcessStartInfo.EnvironmentVariables[envVariable.Key] = envVariable.Value;
+                    }
+                    else
+                    {
+                        testProcessStartInfo.EnvironmentVariables.Add(envVariable.Key, envVariable.Value);
+                    }
+                }
+            }
+
+            return base.LaunchProcessWithDebuggerAttached(testProcessStartInfo);
+        }
+
+        /// <inheritdoc />
+        protected override TestProcessStartInfo UpdateTestProcessStartInfo(TestProcessStartInfo testProcessStartInfo)
+        {
+            if (testProcessStartInfo.EnvironmentVariables == null)
+            {
+                testProcessStartInfo.EnvironmentVariables = this.dataCollectionEnvironmentVariables;
+            }
+            else
+            {
+                foreach (var kvp in this.dataCollectionEnvironmentVariables)
+                {
+                    testProcessStartInfo.EnvironmentVariables[kvp.Key] = kvp.Value;
+                }
+            }
+
+            // Update Telemetry Opt in status because by default in Test Host Telemetry is opted out
+            var telemetryOptedIn = this.requestData.IsTelemetryOptedIn ? "true" : "false";
+            testProcessStartInfo.Arguments += " --datacollectionport " + this.dataCollectionPort
+                                              + " --telemetryoptedin " + telemetryOptedIn;
+
+            return testProcessStartInfo;
         }
     }
 
     /// <summary>
-    /// Handles Log events and stores them in list. Messages in the list will be emptied after test execution begins.
+    /// Handles Log events and stores them in list. Messages in the list will be logged after test execution begins.
     /// </summary>
     internal class DataCollectionRunEventsHandler : ITestMessageEventHandler
     {
         /// <summary>
-        /// The constructor.
+        /// Initializes a new instance of the <see cref="DataCollectionRunEventsHandler"/> class. 
         /// </summary>
         public DataCollectionRunEventsHandler()
         {
-            this.ExceptionMessages = new List<string>();
+            this.Messages = new List<Tuple<TestMessageLevel, string>>();
         }
 
         /// <summary>
-        /// Gets the exception messages.
+        /// Gets the cached messages.
         /// </summary>
-        public List<string> ExceptionMessages { get; private set; }
+        public List<Tuple<TestMessageLevel, string>> Messages { get; private set; }
 
-        /// <summary>
-        /// The handle log message.
-        /// </summary>
-        /// <param name="level">
-        /// The level.
-        /// </param>
-        /// <param name="message">
-        /// The message.
-        /// </param>
+        /// <inheritdoc />
         public void HandleLogMessage(TestMessageLevel level, string message)
         {
-            this.ExceptionMessages.Add(message);
+            this.Messages.Add(new Tuple<TestMessageLevel, string>(level, message));
         }
 
-        /// <summary>
-        /// The handle raw message.
-        /// </summary>
-        /// <param name="rawMessage">
-        /// The raw message.
-        /// </param>
-        /// <exception cref="NotImplementedException">
-        /// </exception>
+        /// <inheritdoc />
         public void HandleRawMessage(string rawMessage)
         {
             throw new NotImplementedException();

@@ -21,9 +21,9 @@
     </header>
     <body>
       <trans-unit id="AbortedTestRun">
-        <source>The active Test Run was aborted.</source>
-        <target state="translated">Активный тестовый запуск прерван.</target>
-        <note></note>
+        <source>The active test run was aborted. Reason: {0}</source>
+        <target state="translated">Активный тестовый запуск прерван. Причина: {0}</target>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Прервано активного тестового запуска.</target>
         </alt-trans>
@@ -32,29 +32,49 @@
       <trans-unit id="ConnectionClosed">
         <source>An existing connection was forcibly closed by the remote host.</source>
         <target state="translated">Существующее подключение принудительно закрыто удаленным узлом.</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Существующее соединение было принудительно закрыто удаленным узлом.</target>
         </alt-trans>
         <note from="bb-metadata">fuzzyMatch="15" wordcount="10" adjWordcount="8.5" curWordcount="8.5"</note>
       </trans-unit>
       <trans-unit id="AbortedTestDiscovery">
-        <source>The active Test Discovery was aborted.</source>
-        <target state="translated">Активное обнаружение тестов прервано.</target>
-        <note></note>
+        <source>The active test discovery was aborted. Reason: {0}</source>
+        <target state="translated">Активное обнаружение тестов прервано. Причина: {0}</target>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Активного обнаружения тест был прерван.</target>
         </alt-trans>
         <note from="bb-metadata">fuzzyMatch="15" wordcount="6" adjWordcount="5.1" curWordcount="5.1"</note>
       </trans-unit>
       <trans-unit id="UnableToCommunicateToTestHost">
-        <source>Unable to communicate with test execution process.</source>
-        <target state="translated">Не удается связаться с процессом выполнения теста.</target>
-        <note></note>
+        <source>Unable to communicate with test host process.</source>
+        <target state="translated">Не удалось связаться с хост-процессом теста.</target>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Не удается установить соединение с процессом выполнения теста.</target>
         </alt-trans>
         <note from="bb-metadata">fuzzyMatch="15" wordcount="7" adjWordcount="5.95" curWordcount="5.95"</note>
+      </trans-unit>
+      <trans-unit id="UnexpectedMessage">
+        <source>Unexpected message received. Expected MessageType : {0} Actual MessageType: {1}</source>
+        <target state="translated">Получено непредвиденное сообщение. Ожидаемый тип сообщения (MessageType): {0}, фактический тип сообщения (MessageType): {1}</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="VersionCheckFailed">
+        <source>Protocol version check failed. Make sure test runner and host are compatible.</source>
+        <target state="translated">Проверка версии протокола не пройдена. Убедитесь, что средство запуска теста и узел совместимы.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="VersionCheckTimedout">
+        <source>Failed to negotiate protocol, waiting for response timed out after {0} seconds. This may occur due to machine slowness, please set environment variable {1} to increase timeout.</source>
+        <target state="new">Не удалось согласовать протокол. Подождите, пока истечет время ожидания ответа.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="ConnectionTimeoutErrorMessage">
+        <source>{0} process failed to connect to {1} process after {2} seconds. This may occur due to machine slowness, please set environment variable {3} to increase timeout.</source>
+        <target state="new">{0} process failed to connect to {1} process after {2} seconds. This may occur due to machine slowness, please set environment variable {3} to increase timeout.</target>
+        <note></note>
       </trans-unit>
     </body>
   </file>

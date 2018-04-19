@@ -5,17 +5,23 @@ namespace Microsoft.TestPlatform.AcceptanceTests
 {
     using System;
     using System.IO;
+    using System.Linq;
+#if !NET451
+    using System.Runtime.Loader;
+#else
+    using System.Reflection;
+#endif
 
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     [TestClass]
     public class AppDomainTests : AcceptanceTestBase
     {
-        [CustomDataTestMethod]
-        [NET46TargetFramework]
-        public void RunTestExecutionWithDisableAppDomain(string runnerFramework, string targetFramework, string targetRuntime)
+        [TestMethod]
+        [NetFullTargetFrameworkDataSource]
+        public void RunTestExecutionWithDisableAppDomain(RunnerInfo runnerInfo)
         {
-            AcceptanceTestBase.SetTestEnvironment(this.testEnvironment, runnerFramework, targetFramework, targetRuntime);
+            AcceptanceTestBase.SetTestEnvironment(this.testEnvironment, runnerInfo);
 
             var testAppDomainDetailFileName = Path.Combine(Path.GetTempPath(), "appdomain_test.txt");
             var dataCollectorAppDomainDetailFileName = Path.Combine(Path.GetTempPath(), "appdomain_datacollector.txt");
@@ -28,7 +34,8 @@ namespace Microsoft.TestPlatform.AcceptanceTests
                 this.GetSampleTestAssembly(),
                 this.GetTestAdapterPath(),
                 runsettingsFilePath,
-                this.FrameworkArgValue);
+                this.FrameworkArgValue,
+                runnerInfo.InIsolationValue);
 
             this.InvokeVsTest(arguments);
 
@@ -51,10 +58,15 @@ namespace Microsoft.TestPlatform.AcceptanceTests
         {
             var runSettings = Path.Combine(Path.GetTempPath(), "test_" + Guid.NewGuid() + ".runsettings");
             var inprocasm = this.testEnvironment.GetTestAsset("SimpleDataCollector.dll");
+#if !NET451
+            var assemblyName = AssemblyLoadContext.GetAssemblyName(inprocasm);
+#else
+            var assemblyName = AssemblyName.GetAssemblyName(inprocasm);
+#endif
             var fileContents = @"<RunSettings>
                                     <InProcDataCollectionRunSettings>
                                         <InProcDataCollectors>
-                                            <InProcDataCollector friendlyName='Test Impact' uri='InProcDataCollector://Microsoft/TestImpact/1.0' assemblyQualifiedName='SimpleDataCollector.SimpleDataCollector, SimpleDataCollector, Version=1.0.0.0, Culture=neutral, PublicKeyToken=7ccb7239ffde675a'  codebase={0}>
+                                            <InProcDataCollector friendlyName='Test Impact' uri='InProcDataCollector://Microsoft/TestImpact/1.0' assemblyQualifiedName='SimpleDataCollector.SimpleDataCollector, {0}'  codebase='{1}'>
                                                 <Configuration>
                                                     <Port>4312</Port>
                                                 </Configuration>
@@ -66,7 +78,7 @@ namespace Microsoft.TestPlatform.AcceptanceTests
                                     </RunConfiguration>
                                 </RunSettings>";
 
-            fileContents = string.Format(fileContents, "'" + inprocasm + "'");
+            fileContents = string.Format(fileContents, assemblyName, inprocasm);
             File.WriteAllText(runSettings, fileContents);
 
             return runSettings;

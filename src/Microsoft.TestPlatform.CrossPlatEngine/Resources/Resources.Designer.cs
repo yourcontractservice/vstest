@@ -20,7 +20,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Resources {
     // class via a tool like ResGen or Visual Studio.
     // To add or remove a member, edit your .ResX file then rerun ResGen
     // with the /str option, or rebuild your VS project.
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "15.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     internal class Resources {
@@ -58,6 +58,24 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Resources {
             }
             set {
                 resourceCulture = value;
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Canceling test run as cancelation requested..
+        /// </summary>
+        internal static string CancelationRequested {
+            get {
+                return ResourceManager.GetString("CancelationRequested", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to DataCollector debugging is enabled. Please attach debugger to datacollector process to continue..
+        /// </summary>
+        internal static string DataCollectorDebuggerWarning {
+            get {
+                return ResourceManager.GetString("DataCollectorDebuggerWarning", resourceCulture);
             }
         }
         
@@ -107,6 +125,24 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to ExecutionThreadApartmentState option not supported for framework: {0}..
+        /// </summary>
+        internal static string ExecutionThreadApartmentStateNotSupportedForFramework {
+            get {
+                return ResourceManager.GetString("ExecutionThreadApartmentStateNotSupportedForFramework", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to launch testhost with error: {0}.
+        /// </summary>
+        internal static string FailedToLaunchTestHost {
+            get {
+                return ResourceManager.GetString("FailedToLaunchTestHost", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Could not find file {0}..
         /// </summary>
         internal static string FileNotFound {
@@ -152,15 +188,6 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to No test discoverer is registered to perform discovery of test cases. Register a test discoverer and try again..
-        /// </summary>
-        internal static string NoDiscovererRegistered {
-            get {
-                return ResourceManager.GetString("NoDiscovererRegistered", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Could not find {0}. Make sure that the dotnet is installed on the machine..
         /// </summary>
         internal static string NoDotnetExeFound {
@@ -179,20 +206,20 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Could not find testhost.dll for source &apos;{0}&apos;. Make sure test project has a nuget reference of package &quot;microsoft.testplatform.testhost&quot;..
-        /// </summary>
-        internal static string NoTestHostFileExist {
-            get {
-                return ResourceManager.GetString("NoTestHostFileExist", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to None of the specified source(s) &apos;{0}&apos; is valid. Fix the above errors/warnings and then try again. .
         /// </summary>
         internal static string NoValidSourceFoundForDiscovery {
             get {
                 return ResourceManager.GetString("NoValidSourceFoundForDiscovery", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to You are using an older version of Microsoft.NET.Test.Sdk. Kindly move to a version equal or greater than 15.3.0..
+        /// </summary>
+        internal static string OldTestHostIsGettingUsed {
+            get {
+                return ResourceManager.GetString("OldTestHostIsGettingUsed", resourceCulture);
             }
         }
         
@@ -206,16 +233,34 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to No test is available in {0}. Make sure that installed test discoverers &amp; executors, platform &amp; framework version settings are appropriate and try again..
+        ///   Looks up a localized string similar to Logging TestHost Diagnostics in file: {0}.
         /// </summary>
-        internal static string TestRunFailed_NoTestsAreAvailableInTheSources {
+        internal static string TesthostDiagLogOutputFile {
             get {
-                return ResourceManager.GetString("TestRunFailed_NoTestsAreAvailableInTheSources", resourceCulture);
+                return ResourceManager.GetString("TesthostDiagLogOutputFile", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to No tests matched the filter because it contains one or more properties that are not valid ({0}). Specify filter expression containing valid properties ({1}) and try again..
+        ///   Looks up a localized string similar to Testhost process exited with error: {0}.
+        /// </summary>
+        internal static string TestHostExitedWithError {
+            get {
+                return ResourceManager.GetString("TestHostExitedWithError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No test is available in {0}. Make sure that test discoverer &amp; executors are registered and platform &amp; framework version settings are appropriate and try again..
+        /// </summary>
+        internal static string TestRunFailed_NoDiscovererFound_NoTestsAreAvailableInTheSources {
+            get {
+                return ResourceManager.GetString("TestRunFailed_NoDiscovererFound_NoTestsAreAvailableInTheSources", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to No tests matched the filter because it contains one or more properties that are not valid ({0}). Specify filter expression containing valid properties ({1})..
         /// </summary>
         internal static string UnsupportedPropertiesInTestCaseFilter {
             get {

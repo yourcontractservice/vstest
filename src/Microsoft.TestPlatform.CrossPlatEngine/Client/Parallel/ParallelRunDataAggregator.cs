@@ -3,13 +3,15 @@
 
 namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client.Parallel
 {
-    using Microsoft.VisualStudio.TestPlatform.ObjectModel;
-    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.Linq;
-    using System.Threading.Tasks;
+
+    using Microsoft.VisualStudio.TestPlatform.Common.Telemetry;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
 
     /// <summary>
     /// ParallelRunDataAggregator aggregates test run data from execution managers running in parallel
@@ -22,6 +24,8 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client.Parallel
 
         private List<ITestRunStatistics> testRunStatsList;
 
+        private ConcurrentDictionary<string, object> metricsAggregator;
+
         private object dataUpdateSyncObject = new object();
 
         #endregion
@@ -29,11 +33,13 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client.Parallel
         public ParallelRunDataAggregator()
         {
             ElapsedTime = TimeSpan.Zero;
-            RunContextAttachments = new List<AttachmentSet>();
+            RunContextAttachments = new Collection<AttachmentSet>();
             RunCompleteArgsAttachments = new List<AttachmentSet>();
             Exceptions = new List<Exception>();
             executorUris = new List<string>();
             testRunStatsList = new List<ITestRunStatistics>();
+
+            metricsAggregator = new ConcurrentDictionary<string, object>();
 
             IsAborted = false;
             IsCanceled = false;
@@ -43,7 +49,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client.Parallel
 
         public TimeSpan ElapsedTime { get; set; }
 
-        public List<AttachmentSet> RunContextAttachments { get; }
+        public Collection<AttachmentSet> RunContextAttachments { get; }
 
         public List<AttachmentSet> RunCompleteArgsAttachments { get; }
 
@@ -84,6 +90,34 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client.Parallel
             return overallRunStats;
         }
 
+        /// <summary>
+        /// Returns the Aggregated Run Data Metrics
+        /// </summary>
+        /// <returns></returns>
+        public IDictionary<string, object> GetAggregatedRunDataMetrics()
+        {
+            if (this.metricsAggregator == null || this.metricsAggregator.Count == 0)
+            {
+                return new ConcurrentDictionary<string, object>();
+            }
+
+            var adapterUsedCount = this.metricsAggregator.Count(metrics =>
+                metrics.Key.Contains(TelemetryDataConstants.TotalTestsRanByAdapter));
+
+            var adaptersDiscoveredCount = this.metricsAggregator.Count(metrics =>
+                metrics.Key.Contains(TelemetryDataConstants.TimeTakenToRunTestsByAnAdapter));
+
+            // Aggregating Total Adapter Used Count
+            this.metricsAggregator.TryAdd(TelemetryDataConstants.NumberOfAdapterUsedToRunTests, adapterUsedCount);
+
+            // Aggregating Total Adapters Discovered Count
+            this.metricsAggregator.TryAdd(
+                TelemetryDataConstants.NumberOfAdapterDiscoveredDuringExecution,
+                adaptersDiscoveredCount);
+
+            return this.metricsAggregator;
+        }
+
         public Exception GetAggregatedException()
         {
             if (Exceptions == null || Exceptions.Count < 1) return null;
@@ -111,11 +145,49 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client.Parallel
                 this.IsCanceled = this.IsCanceled || isCanceled;
 
                 ElapsedTime = TimeSpan.FromMilliseconds(Math.Max(ElapsedTime.TotalMilliseconds, elapsedTime.TotalMilliseconds));
-                if (runContextAttachments != null) RunContextAttachments.AddRange(runContextAttachments);
+                if (runContextAttachments != null)
+                {
+                    foreach (var attachmentSet in runContextAttachments)
+                    {
+                        RunContextAttachments.Add(attachmentSet);
+                    }
+                }
+
                 if (runCompleteArgsAttachments != null) RunCompleteArgsAttachments.AddRange(runCompleteArgsAttachments);
                 if (exception != null) Exceptions.Add(exception);
                 if (executorUris != null) this.executorUris.AddRange(executorUris);
                 if (testRunStats != null) testRunStatsList.Add(testRunStats);
+            }
+        }
+
+        /// <summary>
+        /// Aggregates Run Data Metrics from each Test Host Process
+        /// </summary>
+        /// <param name="metrics"></param>
+        public void AggregateRunDataMetrics(IDictionary<string, object> metrics)
+        {
+            if (metrics == null || metrics.Count == 0 || this.metricsAggregator == null)
+            {
+                return;
+            }
+
+            foreach (var metric in metrics)
+            {
+                if (metric.Key.Contains(TelemetryDataConstants.TimeTakenToRunTestsByAnAdapter) || metric.Key.Contains(TelemetryDataConstants.TimeTakenByAllAdaptersInSec) || (metric.Key.Contains(TelemetryDataConstants.TotalTestsRun) || metric.Key.Contains(TelemetryDataConstants.TotalTestsRanByAdapter)))
+                {
+                    var newValue = Convert.ToDouble(metric.Value);
+                    object oldValue;
+
+                    if (this.metricsAggregator.TryGetValue(metric.Key, out oldValue))
+                    {
+                        var oldDoubleValue = Convert.ToDouble(oldValue);
+                        this.metricsAggregator[metric.Key] = newValue + oldDoubleValue;
+                    }
+                    else
+                    {
+                        this.metricsAggregator.TryAdd(metric.Key, newValue);
+                    }
+                }
             }
         }
 

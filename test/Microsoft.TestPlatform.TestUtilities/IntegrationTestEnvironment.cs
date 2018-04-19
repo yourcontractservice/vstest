@@ -4,7 +4,9 @@
 namespace Microsoft.TestPlatform.TestUtilities
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
+    using System.Xml;
 
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -15,54 +17,53 @@ namespace Microsoft.TestPlatform.TestUtilities
     /// </summary>
     public class IntegrationTestEnvironment
     {
-        private readonly string testPlatformRootDirectory;
+        public static string TestPlatformRootDirectory = Environment.GetEnvironmentVariable("TP_ROOT_DIR");
+
+        private static Dictionary<string, string> dependencyVersions;
 
         private readonly bool runningInCli;
+        private string targetRuntime;
 
         public IntegrationTestEnvironment()
         {
             // These environment variables are set in scripts/test.ps1 or scripts/test.sh.
-            this.testPlatformRootDirectory = Environment.GetEnvironmentVariable("TP_ROOT_DIR");
             this.TargetFramework = Environment.GetEnvironmentVariable("TPT_TargetFramework");
             this.TargetRuntime = Environment.GetEnvironmentVariable("TPT_TargetRuntime");
 
             // If the variables are not set, valid defaults are assumed.
             if (string.IsNullOrEmpty(this.TargetFramework))
             {
-                // Run integration tests for net46 by default.
-                this.TargetFramework = "net46";
+                // Run integration tests for net451 by default.
+                this.TargetFramework = "net451";
             }
 
-            if (string.IsNullOrEmpty(this.TargetRuntime))
-            {
-                this.TargetRuntime = "win7-x64";
-            }
-
-            if (string.IsNullOrEmpty(this.testPlatformRootDirectory))
+            if (string.IsNullOrEmpty(TestPlatformRootDirectory))
             {
                 // Running in VS/IDE. Use artifacts directory as root.
                 this.runningInCli = false;
-                this.testPlatformRootDirectory = Path.GetFullPath(@"..\..\..");
-                this.TestAssetsPath = Path.Combine(this.testPlatformRootDirectory, @"artifacts\test\TestAssets");
+
+                // Get root directory from test assembly output directory
+                TestPlatformRootDirectory = Path.GetFullPath(@"..\..\..\..\..");
+                this.TestAssetsPath = Path.Combine(TestPlatformRootDirectory, @"test\TestAssets");
             }
             else
             {
                 // Running in command line/CI
                 this.runningInCli = true;
-                this.TestAssetsPath = Path.Combine(this.testPlatformRootDirectory, @"test\TestAssets");
+                this.TestAssetsPath = Path.Combine(TestPlatformRootDirectory, @"test\TestAssets");
             }
 
             // There is an assumption that integration tests will always run from a source enlistment.
             // Need to remove this assumption when we move to a CDP.
-            this.PackageDirectory = Path.Combine(this.testPlatformRootDirectory, @"packages");
-            this.ToolsDirectory = Path.Combine(this.testPlatformRootDirectory, @"tools");
-            this.RunnerFramework = "net46";
+            this.PackageDirectory = Path.Combine(TestPlatformRootDirectory, @"packages");
+            this.ToolsDirectory = Path.Combine(TestPlatformRootDirectory, @"tools");
+            this.RunnerFramework = "net451";
         }
 
         /// <summary>
         /// Gets the build configuration for the test run.
         /// </summary>
-        public string BuildConfiguration
+        public static string BuildConfiguration
         {
             get
             {
@@ -71,6 +72,19 @@ namespace Microsoft.TestPlatform.TestUtilities
 #else
                 return "Release";
 #endif
+            }
+        }
+
+        public Dictionary<string, string> DependencyVersions
+        {
+            get
+            {
+                if (dependencyVersions == null)
+                {
+                    dependencyVersions = GetDependencies(TestPlatformRootDirectory);
+                }
+
+                return dependencyVersions;
             }
         }
 
@@ -94,20 +108,19 @@ namespace Microsoft.TestPlatform.TestUtilities
                 if (this.runningInCli)
                 {
                     value = Path.Combine(
-                        this.testPlatformRootDirectory,
+                        TestPlatformRootDirectory,
                         "artifacts",
-                        this.BuildConfiguration,
+                        BuildConfiguration,
                         this.RunnerFramework,
                         this.TargetRuntime);
                 }
                 else
                 {
                     value = Path.Combine(
-                    this.testPlatformRootDirectory,
-                    "artifacts",
-                    @"src\Microsoft.TestPlatform.VSIXCreator\bin",
-                    this.BuildConfiguration,
-                    "net461",
+                    TestPlatformRootDirectory,
+                    @"src\package\package\bin",
+                    BuildConfiguration,
+                    this.RunnerFramework,
                     this.TargetRuntime);
                 }
 
@@ -117,7 +130,7 @@ namespace Microsoft.TestPlatform.TestUtilities
 
         /// <summary>
         /// Gets the target framework.
-        /// Supported values = <c>net46</c>, <c>netcoreapp1.0</c>.
+        /// Supported values = <c>net451</c>, <c>netcoreapp1.0</c>.
         /// </summary>
         public string TargetFramework
         {
@@ -130,6 +143,35 @@ namespace Microsoft.TestPlatform.TestUtilities
         /// Supported values = <c>win7-x64</c>.
         /// </summary>
         public string TargetRuntime
+        {
+            get
+            {
+                if (this.RunnerFramework == IntegrationTestBase.DesktopRunnerFramework)
+                {
+                    if (string.IsNullOrEmpty(this.targetRuntime))
+                    {
+
+                        this.targetRuntime = "win7-x64";
+                    }
+                }
+                else
+                {
+                    this.targetRuntime = "";
+                }
+
+                return this.targetRuntime;
+            }
+            set
+            {
+                this.targetRuntime = value;
+            }
+        }
+
+        /// <summary>
+        /// Gets the inIsolation.
+        /// Supported values = <c>/InIsolation</c>.
+        /// </summary>
+        public string InIsolationValue
         {
             get; set;
         }
@@ -153,7 +195,7 @@ namespace Microsoft.TestPlatform.TestUtilities
 
         /// <summary>
         /// Gets the application type.
-        /// Supported values = <c>net46</c>, <c>netcoreapp1.0</c>.
+        /// Supported values = <c>net451</c>, <c>netcoreapp1.0</c>.
         /// </summary>
         public string RunnerFramework
         {
@@ -170,18 +212,36 @@ namespace Microsoft.TestPlatform.TestUtilities
         /// Test assets follow several conventions:
         /// (a) They are built for supported frameworks. See <see cref="TargetFramework"/>.
         /// (b) They are built for provided build configuration.
-        /// (c) Name of the test asset matches the parent directory name. E.g. <c>TestAssets\SimpleUnitTest\SimpleUnitTest.xproj</c> must 
-        /// produce <c>TestAssets\SimpleUnitTest\bin\Debug\SimpleUnitTest.dll</c>
+        /// (c) Name of the test asset matches the parent directory name. E.g. <c>TestAssets\SimpleUnitTest\SimpleUnitTest.csproj</c> must
+        /// produce <c>TestAssets\SimpleUnitTest\bin\Debug\net451\SimpleUnitTest.dll</c>
         /// </remarks>
         public string GetTestAsset(string assetName)
+        {
+            return GetTestAsset(assetName, this.TargetFramework);
+        }
+
+        /// <summary>
+        /// Gets the full path to a test asset.
+        /// </summary>
+        /// <param name="assetName">Name of the asset with extension. E.g. <c>SimpleUnitTest.dll</c></param>
+        /// <param name="targetFramework">asset project target framework. E.g <c>net451</c></param>
+        /// <returns>Full path to the test asset.</returns>
+        /// <remarks>
+        /// Test assets follow several conventions:
+        /// (a) They are built for supported frameworks. See <see cref="TargetFramework"/>.
+        /// (b) They are built for provided build configuration.
+        /// (c) Name of the test asset matches the parent directory name. E.g. <c>TestAssets\SimpleUnitTest\SimpleUnitTest.csproj</c> must
+        /// produce <c>TestAssets\SimpleUnitTest\bin\Debug\net451\SimpleUnitTest.dll</c>
+        /// </remarks>
+        public string GetTestAsset(string assetName, string targetFramework)
         {
             var simpleAssetName = Path.GetFileNameWithoutExtension(assetName);
             var assetPath = Path.Combine(
                 this.TestAssetsPath,
                 simpleAssetName,
                 "bin",
-                this.BuildConfiguration,
-                this.TargetFramework,
+                BuildConfiguration,
+                targetFramework,
                 assetName);
 
             Assert.IsTrue(File.Exists(assetPath), "GetTestAsset: Path not found: {0}.", assetPath);
@@ -204,27 +264,34 @@ namespace Microsoft.TestPlatform.TestUtilities
             return packagePath;
         }
 
-        /// <summary>
-        /// Gets the path to <c>vstest.console.exe</c>.
-        /// </summary>
-        /// <returns>
-        /// Full path to test runner
-        /// </returns>
-        public string GetConsoleRunnerPath()
+        private static Dictionary<string, string> GetDependencies(string testPlatformRoot)
         {
-            string consoleRunnerPath = string.Empty;
-
-            if (string.Equals(this.RunnerFramework, "net46"))
+            var dependencyPropsFile = Path.Combine(testPlatformRoot, @"scripts\build\TestPlatform.Dependencies.props");
+            var dependencyProps = new Dictionary<string, string>();
+            if (!File.Exists(dependencyPropsFile))
             {
-                consoleRunnerPath = Path.Combine(this.PublishDirectory, "vstest.console.exe");
-            }
-            else if (string.Equals(this.RunnerFramework, "netcoreapp1.0"))
-            {
-                consoleRunnerPath = Path.Combine(this.ToolsDirectory, @"dotnet\dotnet.exe");
+                throw new FileNotFoundException("Dependency props file not found: " + dependencyPropsFile);
             }
 
-            Assert.IsTrue(File.Exists(consoleRunnerPath), "GetConsoleRunnerPath: Path not found: {0}", consoleRunnerPath);
-            return consoleRunnerPath;
+            using (var reader = XmlReader.Create(dependencyPropsFile))
+            {
+                reader.ReadToFollowing("PropertyGroup");
+                using (var props = reader.ReadSubtree())
+                {
+                    props.MoveToContent();
+                    props.Read();   // Read thru the PropertyGroup node
+                    while (!props.EOF)
+                    {
+                        if (props.IsStartElement() && !string.IsNullOrEmpty(props.Name))
+                        {
+                            dependencyProps.Add(props.Name, props.ReadElementContentAsString());
+                        }
+                        props.Read();
+                    }
+                }
+            }
+
+            return dependencyProps;
         }
     }
 }

@@ -1,98 +1,125 @@
-// Copyright (c) Microsoft Corporation. All rights reserved.
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.DataCollection
 {
+    using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.IO;
-    using System.Reflection;
+    using System.Text;
 
     using Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.DataCollection.Interfaces;
-    using Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Helpers;
-    using Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Helpers.Interfaces;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Logging;
+    using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions.Interfaces;
 
     /// <summary>
-    /// The datacollection launcher.
-    /// This works for Desktop local scenarios
+    /// Abstract DataCollection Launcher provides functionality to handle process launch and exit events.
     /// </summary>
-    internal class DataCollectionLauncher : IDataCollectionLauncher
+    internal abstract class DataCollectionLauncher : IDataCollectionLauncher
     {
-        private const string X64DataCollectorProcessName = "datacollector.exe";
-        private const string X86DataCollectorProcessName = "datacollector.x86.exe";
-        private const string DotnetProcessName = "dotnet.exe";
-        private const string DotnetProcessNameXPlat = "dotnet";
+        protected IProcessHelper processHelper;
 
-        private string dataCollectorProcessName;
-        private Process dataCollectorProcess;
-        private IProcessHelper processHelper;
-        
-        /// <summary>
-        /// The constructor.
-        /// </summary>
-        public DataCollectionLauncher()
-            : this(new ProcessHelper())
-        {
-        }
+        protected IMessageLogger messageLogger;
+
+        protected StringBuilder processStdError;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DataCollectionLauncher"/> class.
         /// </summary>
         /// <param name="processHelper">
-        /// The process helper. 
+        /// The process helper.
         /// </param>
-        internal DataCollectionLauncher(IProcessHelper processHelper)
+        /// <param name="messageLogger">
+        /// The message logger.
+        /// </param>
+        public DataCollectionLauncher(IProcessHelper processHelper, IMessageLogger messageLogger)
         {
             this.processHelper = processHelper;
-            this.dataCollectorProcess = null;
+            this.messageLogger = messageLogger;
+            this.processStdError = new StringBuilder(this.ErrorLength, this.ErrorLength);
         }
 
-        /// <summary>
-        /// Initialize with desired architecture for the host
-        /// </summary>
-        /// <param name="architecture">architecture for the host</param>
-        public void Initialize(Architecture architecture)
-        {
-            this.dataCollectorProcessName = (architecture == Architecture.X86) ? X86DataCollectorProcessName : X64DataCollectorProcessName;
-        }
+        /// <inheritdoc />
+        public int DataCollectorProcessId { get; protected set; }
 
         /// <summary>
-        /// Launches the test host for discovery/execution.
+        /// Gets or sets the error length for data collector error stream.
         /// </summary>
-        /// <param name="environmentVariables">Environment variables for the process.</param>
-        /// <param name="commandLineArguments">The command line arguments to pass to the process.</param>
-        /// <returns>ProcessId of launched Process. 0 means not launched.</returns>
-        public virtual int LaunchDataCollector(IDictionary<string, string> environmentVariables, IList<string> commandLineArguments)
-        {
-            var currentWorkingDirectory = Path.GetDirectoryName(typeof(DataCollectionLauncher).GetTypeInfo().Assembly.Location);
-            string dataCollectorProcessPath, processWorkingDirectory = null;
+        protected int ErrorLength { get; set; } = 4096;
 
-            // TODO: DRY: Move this code to a common place
-            // If we are running in the dotnet.exe context we do not want to launch dataCollector.exe but dotnet.exe with the dataCollector assembly. 
-            // Since dotnet.exe is already built for multiple platforms this would avoid building dataCollector.exe also in multiple platforms.
-            var currentProcessFileName = this.processHelper.GetCurrentProcessFileName();
-            if (currentProcessFileName.EndsWith(DotnetProcessName) || currentProcessFileName.EndsWith(DotnetProcessNameXPlat))
+        /// <summary>
+        /// Gets callback on process exit
+        /// </summary>
+        protected Action<object> ExitCallBack => (process) =>
+        {
+            var exitCode = 0;
+            var processStdErrorStr = this.processStdError.ToString();
+
+            this.processHelper.TryGetExitCode(process, out exitCode);
+
+            if (exitCode != 0)
             {
-                dataCollectorProcessPath = currentProcessFileName;
-                var dataCollectorAssemblyPath = Path.Combine(currentWorkingDirectory, this.dataCollectorProcessName.Replace("exe", "dll"));
-                commandLineArguments.Insert(0, dataCollectorAssemblyPath);
-                processWorkingDirectory = Path.GetDirectoryName(currentProcessFileName);
+                EqtTrace.Error("DataCollectionLauncher.ExitCallBack: Data collector exited with exitcode:{0} error: '{1}'", exitCode, processStdErrorStr);
+
+                if (!string.IsNullOrWhiteSpace(processStdErrorStr))
+                {
+                    this.messageLogger.SendMessage(TestMessageLevel.Error, processStdErrorStr);
+                }
             }
             else
             {
-                dataCollectorProcessPath = Path.Combine(currentWorkingDirectory, this.dataCollectorProcessName);
-                // For IDEs and other scenario - Current directory should be the working directory - not the vstest.console.exe location
-                // For VS - this becomes the solution directory for example
-                // "TestResults" directory will be created at "current directory" of test host
-                processWorkingDirectory = Directory.GetCurrentDirectory();
+                EqtTrace.Info("DataCollectionLauncher.ExitCallBack: Data collector exited with exitcode: 0 error: '{0}'", processStdErrorStr);
             }
+        };
 
-            var argumentsString = string.Join(" ", commandLineArguments);
+        /// <summary>
+        /// Gets callback to read from process error stream
+        /// </summary>
+        protected Action<object, string> ErrorReceivedCallback => (process, data) =>
+            {
+                if (!string.IsNullOrEmpty(data))
+                {
+                    // Log all standard error message because on too much data we ignore starting part.
+                    // This is helpful in abnormal failure of process.
+                    EqtTrace.Warning("DataCollectionLauncher.ErrorReceivedCallback: Data collector standard error line: {0}", data);
 
-            this.dataCollectorProcess = this.processHelper.LaunchProcess(dataCollectorProcessPath, argumentsString, processWorkingDirectory);
-            return this.dataCollectorProcess.Id;
-        }
+                    // Add newline for readbility.
+                    data += Environment.NewLine;
 
+                    // if incoming data stream is huge empty entire testError stream, & limit data stream to MaxCapacity
+                    if (data.Length > this.processStdError.MaxCapacity)
+                    {
+                        this.processStdError.Clear();
+                        data = data.Substring(data.Length - this.processStdError.MaxCapacity);
+                    }
+                    else
+                    {
+                        // remove only what is required, from beginning of error stream
+                        int required = data.Length + this.processStdError.Length - this.processStdError.MaxCapacity;
+                        if (required > 0)
+                        {
+                            this.processStdError.Remove(0, required);
+                        }
+                    }
+
+                    this.processStdError.Append(data);
+                }
+            };
+
+        /// <summary>
+        /// The launch data collector.
+        /// </summary>
+        /// <param name="environmentVariables">
+        /// The environment variables.
+        /// </param>
+        /// <param name="commandLineArguments">
+        /// The command line arguments.
+        /// </param>
+        /// <returns>
+        /// The <see cref="int"/>.
+        /// </returns>
+        public abstract int LaunchDataCollector(
+            IDictionary<string, string> environmentVariables,
+            IList<string> commandLineArguments);
     }
 }

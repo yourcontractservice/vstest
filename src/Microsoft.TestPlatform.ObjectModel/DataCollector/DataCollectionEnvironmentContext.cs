@@ -3,6 +3,8 @@
 
 namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.DataCollection
 {
+    using System;
+
     /// <summary>
     /// Encapsulates the context of the environment a data collector is being hosted in.
     /// </summary>
@@ -11,15 +13,15 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.DataCollection
 #endif
     public sealed class DataCollectionEnvironmentContext
     {
-#region Fields
+        #region Fields
         /// <summary>
         /// DataCollectionContext for the session.
         /// </summary>
         private DataCollectionContext sessionDataCollectionContext;
 
-#endregion
+        #endregion
 
-#region Constructors and initialization
+        #region Constructors and initialization
 
         /// <summary>
         /// Default Constructor
@@ -59,10 +61,10 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.DataCollection
 
             return dataCollectionEnvironmentContext;
         }
-       
-#endregion
 
-#region Properties
+        #endregion
+
+        #region Properties
 
         /// <summary>
         /// DataCollectionContext for the session.
@@ -79,6 +81,6 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.DataCollection
             }
         }
 
-#endregion
+        #endregion
     }
 }

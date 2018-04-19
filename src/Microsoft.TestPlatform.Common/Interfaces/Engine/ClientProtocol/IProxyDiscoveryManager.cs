@@ -12,15 +12,16 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Engine
     {
         /// <summary>
         /// Initializes test discovery. Create the test host, setup channel and initialize extensions.
+        /// <param name="skipDefaultAdapters">Skip default adapters flag.</param>
         /// </summary>
-        void Initialize();
+        void Initialize(bool skipDefaultAdapters);
 
         /// <summary>
         /// Discovers tests
         /// </summary>
         /// <param name="discoveryCriteria">Settings, parameters for the discovery request</param>
         /// <param name="eventHandler">EventHandler for handling discovery events from Engine</param>
-        void DiscoverTests(DiscoveryCriteria discoveryCriteria, ITestDiscoveryEventsHandler eventHandler);
+        void DiscoverTests(DiscoveryCriteria discoveryCriteria, ITestDiscoveryEventsHandler2 eventHandler);
 
         /// <summary>
         /// Aborts the test operation.

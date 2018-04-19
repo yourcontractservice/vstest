@@ -3,11 +3,11 @@
   <file datatype="xml" source-language="en" original="../Resources.resx">
     <body>
       <trans-unit id="DataCollectionMessageFormat">
-        <source>Diagnostic data adapter message: {0}</source>
+        <source>Data collection : {0}</source>
         <note></note>
       </trans-unit>
       <trans-unit id="DataCollectorMessageFormat">
-        <source>Diagnostic data adapter ('{0}') message: {1}.</source>
+        <source>Data collector '{0}' message: {1}.</source>
         <note></note>
       </trans-unit>
       <trans-unit id="DuplicateExtensionUri">
@@ -19,7 +19,7 @@
         <note></note>
       </trans-unit>
       <trans-unit id="DuplicateSettingsProvided">
-        <source>Duplicated run settings section named '{0}' found.  Ignoring the duplicate settings.</source>
+        <source>Duplicate run settings section named '{0}' found.  Ignoring the duplicate settings.</source>
         <note></note>
       </trans-unit>
       <trans-unit id="EmptyParenthesis">
@@ -39,11 +39,11 @@
         <note></note>
       </trans-unit>
       <trans-unit id="LoggerInitializationError">
-        <source>Exception occurred while initializing logger with URI '{0}'.  The logger will not be used.  Exception: {1}</source>
+        <source>Exception occurred while initializing logger with {0}: '{1}'.  The logger will not be used.  Exception: {2}</source>
         <note></note>
       </trans-unit>
       <trans-unit id="LoggerNotFound">
-        <source>Could not find a test logger with URI or FriendlyName '{0}'.</source>
+        <source>Could not find a test logger with AssemblyQualifiedName, URI or FriendlyName '{0}'.</source>
         <note></note>
       </trans-unit>
       <trans-unit id="MissingCloseParenthesis">
@@ -84,6 +84,61 @@
       </trans-unit>
       <trans-unit id="TestCaseFilterFormatException">
         <source>Incorrect format for TestCaseFilter {0}. Specify the correct format and try again. Note that the incorrect format can lead to no test getting executed.</source>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="DataCollectorErrorOnGetVariable">
+        <source>Data collector '{0}' failed to provide initialization information. Error: {1}</source>
+        <target state="new">Diagnostic data adapter '{0}' failed to provide intialization information. Error: {1}</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="DataCollectorInitializationError">
+        <source>Data collector '{0}' threw an exception during type loading, construction, or initialization: {1}.</source>
+        <target state="new">The diagnostic data adapter '{0}'  threw an exception during type loading, construction, or initialization: {1}.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="DataCollectorNotFound">
+        <source>Could not find data collector '{0}'</source>
+        <target state="new">Could not find diagnostic data adapter of type '{0}' and Uri '{1}'</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="DataCollectorRequestedDuplicateEnvironmentVariable">
+        <source>The data collector '{0}' requested environment variable '{1}' with value '{2}' to be set in test execution environment, but another data collector '{3}' has already requested same environment variable with different value '{4}'.</source>
+        <target state="new">The diagnostic data adapter '{0}' requested environment variable '{1}' with value '{2}' to be set in test execution environment, but another diagnostic data adapter '{3}' has already requested same environment variable with different value '{4}'.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="IgnoredDuplicateConfiguration">
+        <source>There are multiple configurations that have data collector FriendlyName as '{0}'. Duplicate configurations will be ignored in the test run.</source>
+        <target state="new">There are multiple configurations that have diagnostic data adapter  type '{0}' or Uri '{1}'. Duplicate configurations will be ignored in the test run.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="ReportDataCollectorException">
+        <source>Data collector caught an exception of type '{0}': '{1}'. More details: {2}.</source>
+        <target state="new">Diagnostic data adapter caught an exception of type '{0}': '{1}'. More details: {2}.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="WrongDataCollectionContextType">
+        <source>Types deriving from the data collection context cannot be used for sending data and messages.  The DataCollectionContext used for sending data and messages must come from one of the events raised to the data collector.</source>
+        <target state="new">Types deriving from the data collection context cannot be used for sending data and messages.  The DataCollectionContext used for sending data and messages must come from one of the events raised to the data collector.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="LoggerUriInvalid">
+        <source>The Test Logger URI '{0}' is not valid.  The Test Logger will be ignored.</source>
+        <target state="new">The Test Logger URI '{0}' is not valid.  The Test Logger will be ignored.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="FailedToFindInstalledUnitTestExtensions">
+        <source>Failed to find the list of installed unit test extensions. Reason: {0}</source>
+        <target state="new">Failed to find the list of installed unit test extensions. Reason: {0}</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="VSInstallationNotFound">
+        <source>This option works only with vstest.console.exe installed as part of Visual Studio.</source>
+        <target state="new">Unable to find devenv under path {0}. Make sure tests are run via vstest.console.exe installed as part of Visual Studio.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="FastFilterException">
+        <source>An error occured while creating Fast filter.</source>
+        <target state="new">An error occured while creating Fast filter.</target>
         <note></note>
       </trans-unit>
     </body>

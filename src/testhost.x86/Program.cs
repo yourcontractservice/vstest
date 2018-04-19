@@ -7,9 +7,12 @@ namespace Microsoft.VisualStudio.TestPlatform.TestHost
     using System.Collections.Generic;
     using System.Diagnostics;
 
-    using Microsoft.VisualStudio.TestPlatform.ObjectModel;
-    using Microsoft.VisualStudio.TestPlatform.Utilities;
+    using Microsoft.VisualStudio.TestPlatform.CoreUtilities.Helpers;
     using Microsoft.VisualStudio.TestPlatform.CoreUtilities.Tracing;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel;
+    using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions;
+    using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions.Interfaces;
+    using Microsoft.VisualStudio.TestPlatform.Utilities;
 
     /// <summary>
     /// The program.
@@ -29,22 +32,28 @@ namespace Microsoft.VisualStudio.TestPlatform.TestHost
             try
             {
                 TestPlatformEventSource.Instance.TestHostStart();
-                WaitForDebuggerIfEnabled();
                 Run(args);
             }
             catch (Exception ex)
             {
                 EqtTrace.Error("TestHost: Error occured during initialization of TestHost : {0}", ex);
+
+                // Throw exception so that vstest.console get the exception message.
+                throw;
             }
             finally
             {
                 TestPlatformEventSource.Instance.TestHostStop();
+                EqtTrace.Info("Testhost process exiting.");
             }
         }
 
-        private static void Run(string[] args)
+        // In UWP(App models) Run will act as entry point from Application end, so making this method public
+        public static void Run(string[] args)
         {
-            var argsDictionary = GetArguments(args);
+            WaitForDebuggerIfEnabled();
+            var argsDictionary = CommandLineArgumentsHelper.GetArgumentsDictionary(args);
+            
             // Invoke the engine with arguments
             GetEngineInvoker(argsDictionary).Invoke(argsDictionary);
         }
@@ -52,7 +61,7 @@ namespace Microsoft.VisualStudio.TestPlatform.TestHost
         private static IEngineInvoker GetEngineInvoker(IDictionary<string, string> argsDictionary)
         {
             IEngineInvoker invoker = null;
-#if NET46
+#if NET451
             // If Args contains test source argument, invoker Engine in new appdomain 
             string testSourcePath;
             if (argsDictionary.TryGetValue(TestSourceArgumentString, out testSourcePath) && !string.IsNullOrWhiteSpace(testSourcePath))
@@ -72,48 +81,23 @@ namespace Microsoft.VisualStudio.TestPlatform.TestHost
             return invoker ?? new DefaultEngineInvoker();
         }
 
-        /// <summary>
-        /// Parse command line arguments to a dictionary.
-        /// </summary>
-        /// <param name="args">Command line arguments. Ex: <c>{ "--port", "12312", "--parentprocessid", "2312", "--testsourcepath", "C:\temp\1.dll" }</c></param>
-        /// <returns>Dictionary of arguments keys and values.</returns>
-        private static IDictionary<string, string> GetArguments(string[] args)
-        {
-            IDictionary<string, string> argsDictionary = new Dictionary<string, string>();
-            for (int i = 0; i < args.Length; i++)
-            {
-                if (args[i].StartsWith("-"))
-                {
-                    if (i < args.Length - 1 && !args[i + 1].StartsWith("-"))
-                    {
-                        argsDictionary.Add(args[i], args[i + 1]);
-                        i++;
-                    }
-                    else
-                    {
-                        argsDictionary.Add(args[i], null);
-                    }
-                }
-            }
-
-            return argsDictionary;
-        }
-
         private static void WaitForDebuggerIfEnabled()
         {
+            IProcessHelper processHelper = new ProcessHelper();
             var debugEnabled = Environment.GetEnvironmentVariable("VSTEST_HOST_DEBUG");
             if (!string.IsNullOrEmpty(debugEnabled) && debugEnabled.Equals("1", StringComparison.Ordinal))
             {
                 ConsoleOutput.Instance.WriteLine("Waiting for debugger attach...", OutputLevel.Information);
 
-                var currentProcess = Process.GetCurrentProcess();
+                var currentProcessId = processHelper.GetCurrentProcessId();
+                var currentProcessName = processHelper.GetProcessName(currentProcessId);
                 ConsoleOutput.Instance.WriteLine(
-                    string.Format("Process Id: {0}, Name: {1}", currentProcess.Id, currentProcess.ProcessName),
+                    string.Format("Process Id: {0}, Name: {1}", currentProcessId, currentProcessName),
                     OutputLevel.Information);
 
                 while (!Debugger.IsAttached)
                 {
-                    System.Threading.Thread.Sleep(1000);
+                    System.Threading.Tasks.Task.Delay(1000).Wait();
                 }
 
                 Debugger.Break();

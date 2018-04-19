@@ -6,6 +6,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client.Parallel
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
 
+    using Microsoft.VisualStudio.TestPlatform.Common.Telemetry;
     using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
     using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Interfaces;
     using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel;
@@ -29,16 +30,20 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client.Parallel
 
         private IDataSerializer dataSerializer;
 
-        public ParallelRunEventsHandler(IProxyExecutionManager proxyExecutionManager,
+        private IRequestData requestData;
+
+        public ParallelRunEventsHandler(IRequestData requestData,
+            IProxyExecutionManager proxyExecutionManager,
             ITestRunEventsHandler actualRunEventsHandler,
             IParallelProxyExecutionManager parallelProxyExecutionManager,
             ParallelRunDataAggregator runDataAggregator) : 
-            this(proxyExecutionManager, actualRunEventsHandler, parallelProxyExecutionManager, runDataAggregator, JsonDataSerializer.Instance)
+            this(requestData, proxyExecutionManager, actualRunEventsHandler, parallelProxyExecutionManager, runDataAggregator, JsonDataSerializer.Instance)
         {
         }
 
 
-        internal ParallelRunEventsHandler(IProxyExecutionManager proxyExecutionManager,
+        internal ParallelRunEventsHandler(IRequestData requestData,
+            IProxyExecutionManager proxyExecutionManager,
             ITestRunEventsHandler actualRunEventsHandler,
             IParallelProxyExecutionManager parallelProxyExecutionManager,
             ParallelRunDataAggregator runDataAggregator,
@@ -49,13 +54,41 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client.Parallel
             this.parallelProxyExecutionManager = parallelProxyExecutionManager;
             this.runDataAggregator = runDataAggregator;
             this.dataSerializer = dataSerializer;
+            this.requestData = requestData;
         }
 
         /// <summary>
         /// Handles the Run Complete event from a parallel proxy manager
         /// </summary>
-        public void HandleTestRunComplete(
+        public virtual void HandleTestRunComplete(
             TestRunCompleteEventArgs testRunCompleteArgs,
+            TestRunChangedEventArgs lastChunkArgs,
+            ICollection<AttachmentSet> runContextAttachments,
+            ICollection<string> executorUris)
+        {
+            var parallelRunComplete = HandleSingleTestRunComplete(testRunCompleteArgs, lastChunkArgs, runContextAttachments, executorUris);
+
+            if (parallelRunComplete)
+            {
+                var completedArgs = new TestRunCompleteEventArgs(this.runDataAggregator.GetAggregatedRunStats(),
+                    this.runDataAggregator.IsCanceled,
+                    this.runDataAggregator.IsAborted,
+                    this.runDataAggregator.GetAggregatedException(),
+                    new Collection<AttachmentSet>(this.runDataAggregator.RunCompleteArgsAttachments),
+                    this.runDataAggregator.ElapsedTime);
+
+                // Collect Final RunState
+                this.requestData.MetricsCollection.Add(TelemetryDataConstants.RunState, this.runDataAggregator.IsAborted ? "Aborted" : this.runDataAggregator.IsCanceled ? "Canceled" : "Completed");
+
+                // Collect Aggregated Metrics Data
+                var aggregatedRunDataMetrics = runDataAggregator.GetAggregatedRunDataMetrics();
+
+                completedArgs.Metrics = aggregatedRunDataMetrics;
+                HandleParallelTestRunComplete(completedArgs);
+            }
+        }
+
+        protected bool HandleSingleTestRunComplete(TestRunCompleteEventArgs testRunCompleteArgs,
             TestRunChangedEventArgs lastChunkArgs,
             ICollection<AttachmentSet> runContextAttachments,
             ICollection<string> executorUris)
@@ -71,7 +104,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client.Parallel
 
             // Update runstats, executorUris, etc. 
             // we need this data when we send the final runcomplete 
-            runDataAggregator.Aggregate(
+            this.runDataAggregator.Aggregate(
                 testRunCompleteArgs.TestRunStatistics,
                 executorUris,
                 testRunCompleteArgs.Error,
@@ -81,42 +114,35 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client.Parallel
                 runContextAttachments,
                 testRunCompleteArgs.AttachmentSets);
 
-            // Do not send TestRunComplete to actual test run handler
-            // We need to see if there are still sources to execute - let the parallel manager decide
-            var parallelRunComplete = this.parallelProxyExecutionManager.HandlePartialRunComplete(
-                    this.proxyExecutionManager,
-                    testRunCompleteArgs,
-                    null, // lastChunk should be null as we already sent this data above
-                    runContextAttachments,
-                    executorUris);
+            // Aggregate Run Data Metrics
+            this.runDataAggregator.AggregateRunDataMetrics(testRunCompleteArgs.Metrics);
 
-            if (parallelRunComplete)
+            return this.parallelProxyExecutionManager.HandlePartialRunComplete(
+                this.proxyExecutionManager,
+                testRunCompleteArgs,
+                null, // lastChunk should be null as we already sent this data above
+                runContextAttachments,
+                executorUris);
+        }
+
+        protected void HandleParallelTestRunComplete(TestRunCompleteEventArgs completedArgs)
+        {
+            // In case of sequential execution - RawMessage would have contained a 'TestRunCompletePayload' object
+            // To send a rawmessge - we need to create rawmessage from an aggregated payload object 
+            var testRunCompletePayload = new TestRunCompletePayload()
             {
-                // todo : Merge Code Coverage files here
-                var completedArgs = new TestRunCompleteEventArgs(runDataAggregator.GetAggregatedRunStats(),
-                    runDataAggregator.IsCanceled,
-                    runDataAggregator.IsAborted,
-                    runDataAggregator.GetAggregatedException(),
-                    new Collection<AttachmentSet>(runDataAggregator.RunCompleteArgsAttachments),
-                    runDataAggregator.ElapsedTime);
+                ExecutorUris = this.runDataAggregator.ExecutorUris,
+                LastRunTests = null,
+                RunAttachments = this.runDataAggregator.RunContextAttachments,
+                TestRunCompleteArgs = completedArgs
+            };
 
-                // In case of sequential execution - RawMessage would have contained a 'TestRunCompletePayload' object
-                // To send a rawmessge - we need to create rawmessage from an aggregated payload object 
-                var testRunCompletePayload = new TestRunCompletePayload()
-                {
-                    ExecutorUris = runDataAggregator.ExecutorUris,
-                    LastRunTests = null,
-                    RunAttachments = runDataAggregator.RunContextAttachments,
-                    TestRunCompleteArgs = completedArgs
-                };
+            // we have to send rawmessages as we block the runcomplete actual raw messages
+            ConvertToRawMessageAndSend(MessageType.ExecutionComplete, testRunCompletePayload);
 
-                // we have to send rawmessages as we block the runcomplete actual raw messages
-                ConvertToRawMessageAndSend(MessageType.ExecutionComplete, testRunCompletePayload);
-
-                // send actual test runcomplete to clients
-                this.actualRunEventsHandler.HandleTestRunComplete(
-                   completedArgs, null, runDataAggregator.RunContextAttachments, runDataAggregator.ExecutorUris);
-            }
+            // send actual test runcomplete to clients
+            this.actualRunEventsHandler.HandleTestRunComplete(
+                completedArgs, null, this.runDataAggregator.RunContextAttachments, this.runDataAggregator.ExecutorUris);
         }
 
         public void HandleRawMessage(string rawMessage)

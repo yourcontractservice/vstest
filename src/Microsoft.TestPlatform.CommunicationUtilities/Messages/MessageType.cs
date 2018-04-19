@@ -39,6 +39,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel
         public const string VersionCheck = "ProtocolVersion";
 
         /// <summary>
+        /// Protocol Error
+        /// </summary>
+        public const string ProtocolError = "ProtocolError";
+
+        /// <summary>
         /// The session start.
         /// </summary>
         public const string DiscoveryInitialize = "TestDiscovery.Initialize";
@@ -47,7 +52,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel
         /// The discovery started.
         /// </summary>
         public const string StartDiscovery = "TestDiscovery.Start";
-       
+
         /// <summary>
         /// The test cases found.
         /// </summary>
@@ -104,12 +109,12 @@ namespace Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel
         public const string GetTestRunnerProcessStartInfoForRunSelected = "TestExecution.GetTestRunnerProcessStartInfoForRunSelected";
 
         /// <summary>
-        /// CustomTestHostLaunch 
+        /// CustomTestHostLaunch
         /// </summary>
         public const string CustomTestHostLaunch = "TestExecution.CustomTestHostLaunch";
 
         /// <summary>
-        /// Custom Test Host launch callback 
+        /// Custom Test Host launch callback
         /// </summary>
         public const string CustomTestHostLaunchCallback = "TestExecution.CustomTestHostLaunchCallback";
 
@@ -119,7 +124,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel
         public const string ExtensionsInitialize = "Extensions.Initialize";
 
         /// <summary>
-        /// Start Test Run All Sources 
+        /// Start Test Run All Sources
         /// </summary>
         public const string TestRunAllSourcesWithDefaultHost = "TestExecution.RunAllWithDefaultHost";
 
@@ -138,27 +143,57 @@ namespace Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel
         /// </summary>
         public const string LaunchAdapterProcessWithDebuggerAttachedCallback = "TestExecution.LaunchAdapterProcessWithDebuggerAttachedCallback";
 
+        /// <summary>
+        /// Data Collection Message
+        /// </summary>
+        public const string DataCollectionMessage = "DataCollection.SendMessage";
+
         #region DataCollector messages
 
         /// <summary>
-        /// Event message for Before Test Run Start
+        /// Event message type sent to datacollector process right after test host process has started.
+        /// </summary>
+        public const string TestHostLaunched = "DataCollection.TestHostLaunched";
+
+        /// <summary>
+        /// Event message type send to datacollector process before test run starts.
         /// </summary>
         public const string BeforeTestRunStart = "DataCollection.BeforeTestRunStart";
 
         /// <summary>
-        /// Message for result for Before Test Run Start
+        /// Event message type used by datacollector to send results  after receiving test run start event.
         /// </summary>
         public const string BeforeTestRunStartResult = "DataCollection.BeforeTestRunStartResult";
 
         /// <summary>
-        /// Event message for After Test Run End
+        /// Event message type send to datacollector process after test run ends.
         /// </summary>
         public const string AfterTestRunEnd = "DataCollection.AfterTestRunEnd";
 
         /// <summary>
-        /// Message for attachments for After Test Run End Result
+        /// Event message type used by dastacollector to send result on receiving test run end event.
         /// </summary>
         public const string AfterTestRunEndResult = "DataCollection.AfterTestRunEndResult";
+
+        /// <summary>
+        /// Event message type send to datacollector process before test case execution starts.
+        /// </summary>
+        public const string DataCollectionTestStart = "DataCollection.TestStart";
+
+        /// <summary>
+        /// Event message type used to signal datacollector process that test case execution has ended.
+        /// </summary>
+        public const string DataCollectionTestEnd = "DataCollection.TestEnd";
+
+        /// <summary>
+        /// Event message type used by datacollector to send result on receiving TestEnd.
+        /// </summary>
+        public const string DataCollectionTestEndResult = "DataCollection.TestEndResult";
+
+        /// <summary>
+        /// Ack Event message type send to datacollector process before test case execution starts.
+        /// </summary>
+        public const string DataCollectionTestStartAck = "DataCollection.TestStartAck";
 
         #endregion
     }

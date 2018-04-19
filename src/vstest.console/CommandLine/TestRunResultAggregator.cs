@@ -20,7 +20,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
         /// Initializes the TestRunResultAggregator
         /// </summary>
         /// <remarks>Constructor is private since the factory method should be used to get the instance.</remarks>
-        private TestRunResultAggregator()
+        protected TestRunResultAggregator()
         {
             // Outcome is passed until we see a failure.
             this.Outcome = TestOutcome.Passed;
@@ -107,13 +107,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
         /// </summary>
         private void TestRunCompletionHandler(object sender, TestRunCompleteEventArgs e)
         {
-            if (e.TestRunStatistics == null)
+            if (e.TestRunStatistics == null || e.IsCanceled || e.IsAborted)
             {
                 this.Outcome = TestOutcome.Failed;
-                return;
             }
-
-            if (e.TestRunStatistics[TestOutcome.Failed] > 0)
+            else if (e.TestRunStatistics[TestOutcome.Failed] > 0)
             {
                 this.Outcome = TestOutcome.Failed;
             }

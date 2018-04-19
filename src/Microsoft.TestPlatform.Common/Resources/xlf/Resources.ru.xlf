@@ -21,18 +21,18 @@
     </header>
     <body>
       <trans-unit id="DataCollectionMessageFormat">
-        <source>Diagnostic data adapter message: {0}</source>
-        <target state="translated">Сообщение адаптера диагностических данных: {0}</target>
-        <note></note>
+        <source>Data collection : {0}</source>
+        <target state="translated">Сбор данных: {0}</target>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Сообщение адаптера диагностических данных: {0}</target>
         </alt-trans>
         <note from="bb-metadata">fuzzyMatch="15" wordcount="5" adjWordcount="4.25" curWordcount="4.25"</note>
       </trans-unit>
       <trans-unit id="DataCollectorMessageFormat">
-        <source>Diagnostic data adapter ('{0}') message: {1}.</source>
-        <target state="translated">Сообщение адаптера диагностических данных ("{0}"): {1}.</target>
-        <note></note>
+        <source>Data collector '{0}' message: {1}.</source>
+        <target state="translated">Сообщение сборщика данных "{0}": {1}.</target>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Адаптер («{0}») сообщение диагностических данных: {1}.</target>
         </alt-trans>
@@ -41,7 +41,7 @@
       <trans-unit id="DuplicateExtensionUri">
         <source>Duplicate test extension URI '{0}'.  Ignoring the duplicate extension.</source>
         <target state="translated">Повторяющийся URI расширения теста "{0}". Повторяющееся расширение пропускается.</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Дублировать расширения теста URI «{0}».  Пропуск повторяющихся расширения.</target>
         </alt-trans>
@@ -50,16 +50,16 @@
       <trans-unit id="DuplicateSettingsName">
         <source>Duplicate settings provider named '{0}'.  Ignoring the duplicate provider.</source>
         <target state="translated">Повторяющийся поставщик параметров с именем "{0}". Повторяющийся поставщик пропускается.</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Дублировать параметры поставщика с именем «{0}».  Пропуск повторяющихся поставщика.</target>
         </alt-trans>
         <note from="bb-metadata">fuzzyMatch="15" wordcount="9" adjWordcount="7.65" curWordcount="7.65"</note>
       </trans-unit>
       <trans-unit id="DuplicateSettingsProvided">
-        <source>Duplicated run settings section named '{0}' found.  Ignoring the duplicate settings.</source>
+        <source>Duplicate run settings section named '{0}' found.  Ignoring the duplicate settings.</source>
         <target state="translated">Обнаружен повторяющийся раздел параметров запуска с именем "{0}". Повторяющиеся параметры пропускаются.</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Дублирование с именем «{0}» обнаружен раздел параметров запуска.  Игнорировать повторяющиеся параметры.</target>
         </alt-trans>
@@ -68,7 +68,7 @@
       <trans-unit id="EmptyParenthesis">
         <source>Error: Empty parenthesis ( )</source>
         <target state="translated">Ошибка: пустые круглые скобки ()</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Ошибка: Пустые круглые скобки)</target>
         </alt-trans>
@@ -77,7 +77,7 @@
       <trans-unit id="InvalidCondition">
         <source>Error: Invalid Condition '{0}'</source>
         <target state="translated">Ошибка: недопустимое условие "{0}"</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Ошибка: Недопустимое условие «{0}»</target>
         </alt-trans>
@@ -86,7 +86,7 @@
       <trans-unit id="InvalidExtensionUriFormat">
         <source>Test Extension has an invalid URI '{0}': {1}</source>
         <target state="translated">Расширение теста имеет недопустимый URI "{0}": {1}</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Расширение теста имеет недопустимый URI «{0}»: {1}</target>
         </alt-trans>
@@ -95,15 +95,15 @@
       <trans-unit id="InvalidOperator">
         <source>Error: Invalid operator '{0}'</source>
         <target state="translated">Ошибка: недопустимый оператор "{0}"</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Ошибка: Недопустимый оператор «{0}»</target>
         </alt-trans>
         <note from="bb-metadata">fuzzyMatch="15" wordcount="4" adjWordcount="3.4" curWordcount="3.4"</note>
       </trans-unit>
       <trans-unit id="LoggerInitializationError">
-        <source>Exception occurred while initializing logger with URI '{0}'.  The logger will not be used.  Exception: {1}</source>
-        <target state="translated">При инициализации средства ведения журнала с URI "{0}" возникло исключение. Средство ведения журнала не будет использоваться. Исключение: {1}</target>
+        <source>Exception occurred while initializing logger with {0}: '{1}'.  The logger will not be used.  Exception: {2}</source>
+        <target state="new">При инициализации средства ведения журнала с URI "{0}" возникло исключение. Средство ведения журнала не будет использоваться. Исключение: {1}</target>
         <note></note>
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Возникло исключение во время инициализации средства ведения журнала с URI «{0}».  Средства ведения журнала не будет использоваться.  Исключение: {1}</target>
@@ -111,8 +111,8 @@
         <note from="bb-metadata">fuzzyMatch="15" wordcount="16" adjWordcount="13.6" curWordcount="13.6"</note>
       </trans-unit>
       <trans-unit id="LoggerNotFound">
-        <source>Could not find a test logger with URI or FriendlyName '{0}'.</source>
-        <target state="translated">Не удалось найти средство ведения журнала тестирования с URI или понятным именем "{0}".</target>
+        <source>Could not find a test logger with AssemblyQualifiedName, URI or FriendlyName '{0}'.</source>
+        <target state="new">Не удалось найти средство ведения журнала тестирования с URI или понятным именем "{0}".</target>
         <note></note>
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Не удалось найти средство ведения журнала тестирования с URI или FriendlyName «{0}».</target>
@@ -122,7 +122,7 @@
       <trans-unit id="MissingCloseParenthesis">
         <source>Error: Missing ')'</source>
         <target state="translated">Ошибка: отсутствует ")"</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Ошибка: Отсутствует ")"</target>
         </alt-trans>
@@ -131,7 +131,7 @@
       <trans-unit id="MissingOpenParenthesis">
         <source>Error: Missing '('</source>
         <target state="translated">Ошибка: отсутствует "("</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Ошибка: Отсутствует "("</target>
         </alt-trans>
@@ -140,7 +140,7 @@
       <trans-unit id="MissingOperand">
         <source>Error: Missing operand</source>
         <target state="translated">Ошибка: отсутствует операнд</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Ошибка: Отсутствует операнд</target>
         </alt-trans>
@@ -149,7 +149,7 @@
       <trans-unit id="MissingOperator">
         <source>Missing Operator '|' or '&amp;'</source>
         <target state="translated">Отсутствует оператор "|" или "&amp;"</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Отсутствует оператор ' |' или '&amp;'</target>
         </alt-trans>
@@ -158,7 +158,7 @@
       <trans-unit id="RunSettingsAlreadyLoaded">
         <source>The Run Settings have already been loaded.</source>
         <target state="translated">Параметры запуска уже загружены.</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Параметры запуска уже загружен.</target>
         </alt-trans>
@@ -167,7 +167,7 @@
       <trans-unit id="RunSettingsParseError">
         <source>An error occurred while loading the run settings.  Error: {0}</source>
         <target state="translated">Произошла ошибка при загрузке параметров запуска. Ошибка: {0}</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Произошла ошибка при загрузке параметров запуска.  Ошибка: {0}</target>
         </alt-trans>
@@ -176,7 +176,7 @@
       <trans-unit id="SettingsNodeInvalidName">
         <source>Invalid settings node specified. The name property of the settings node must be non-empty.</source>
         <target state="translated">Указан недопустимый узел параметров. Узел параметров должен иметь допустимое значение для свойства имени.</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Указанный узел недопустимые параметры. Имя свойства параметров узла должно быть непустой.</target>
         </alt-trans>
@@ -185,7 +185,7 @@
       <trans-unit id="SettingsProviderInitializationError">
         <source>An error occurred while initializing the settings provider named '{0}'. Error: {1}</source>
         <target state="translated">При инициализации поставщика параметров с именем "{0}" произошла ошибка. Ошибка: {1}</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Произошла ошибка при инициализации поставщика параметров с именем «{0}». Ошибка: {1}</target>
         </alt-trans>
@@ -194,7 +194,7 @@
       <trans-unit id="SettingsProviderNotFound">
         <source>Settings Provider named '{0}' was not found.  The settings can not be loaded.</source>
         <target state="translated">Поставщик параметров с именем "{0}" не найден. Невозможно загрузить параметры.</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Поставщик параметров с именем «{0}» не найден.  Параметры не могут быть загружены.</target>
         </alt-trans>
@@ -203,11 +203,66 @@
       <trans-unit id="TestCaseFilterFormatException">
         <source>Incorrect format for TestCaseFilter {0}. Specify the correct format and try again. Note that the incorrect format can lead to no test getting executed.</source>
         <target state="translated">Неверный формат фильтра TestCaseFilter {0}. Задайте правильный формат и повторите попытку. Обратите внимание, что использование неверного формата может привести к тому, что ни один из тестов не будет выполнен.</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Неправильный формат для TestCaseFilter {0}. Укажите правильный формат и повторите попытку. Обратите внимание, что неверный формат может привести к не начало выполнения теста.</target>
         </alt-trans>
         <note from="bb-metadata">fuzzyMatch="15" wordcount="24" adjWordcount="20.4" curWordcount="20.4"</note>
+      </trans-unit>
+      <trans-unit id="DataCollectorErrorOnGetVariable">
+        <source>Data collector '{0}' failed to provide initialization information. Error: {1}</source>
+        <target state="translated">Сборщик данных "{0}" не предоставил сведения для инициализации. Ошибка: {1}</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="DataCollectorInitializationError">
+        <source>Data collector '{0}' threw an exception during type loading, construction, or initialization: {1}.</source>
+        <target state="translated">В сборщике данных "{0}" возникло исключение во время загрузки типа, создания или инициализации: {1}.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="DataCollectorNotFound">
+        <source>Could not find data collector '{0}'</source>
+        <target state="translated">Не удалось найти сборщик данных "{0}"</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="DataCollectorRequestedDuplicateEnvironmentVariable">
+        <source>The data collector '{0}' requested environment variable '{1}' with value '{2}' to be set in test execution environment, but another data collector '{3}' has already requested same environment variable with different value '{4}'.</source>
+        <target state="translated">Сборщик данных "{0}" запросил, чтобы в окружении выполнения тестов была установлена переменная окружения "{1}" со значением "{2}", но другой сборщик данных "{3}" уже запросил эту переменную окружения со значением "{4}".</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="IgnoredDuplicateConfiguration">
+        <source>There are multiple configurations that have data collector FriendlyName as '{0}'. Duplicate configurations will be ignored in the test run.</source>
+        <target state="translated">Существует несколько конфигураций со значением "{0}" для FriendlyName сборщика данных. Повторяющиеся конфигурации будут пропущены в тестовом запуске.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="ReportDataCollectorException">
+        <source>Data collector caught an exception of type '{0}': '{1}'. More details: {2}.</source>
+        <target state="translated">В сборщике данных возникло исключение типа "{0}": "{1}". Дополнительные сведения: {2}.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="WrongDataCollectionContextType">
+        <source>Types deriving from the data collection context cannot be used for sending data and messages.  The DataCollectionContext used for sending data and messages must come from one of the events raised to the data collector.</source>
+        <target state="translated">Нельзя использовать типы, производные от контекста сбора данных, для отправки данных и сообщений.  Используемый для отправки данных и сообщений DataCollectionContext должен происходить от одного из событий, возникших для сборщика данных.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="LoggerUriInvalid">
+        <source>The Test Logger URI '{0}' is not valid.  The Test Logger will be ignored.</source>
+        <target state="translated">URI средства ведения журнала тестирования "{0}" недопустимо. Это средство ведения журнала тестирования будет игнорироваться.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="FailedToFindInstalledUnitTestExtensions">
+        <source>Failed to find the list of installed unit test extensions. Reason: {0}</source>
+        <target state="translated">Не удалось найти список установленных расширений модульных тестов. Причина: {0}</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="VSInstallationNotFound">
+        <source>This option works only with vstest.console.exe installed as part of Visual Studio.</source>
+        <target state="translated">Этот параметр работает, только если в рамках Visual Studio установлена служебная программа vstest.console.exe.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="FastFilterException">
+        <source>An error occured while creating Fast filter.</source>
+        <target state="translated">При создании быстрого (Fast) фильтра произошла ошибка.</target>
+        <note />
       </trans-unit>
     </body>
   </file>

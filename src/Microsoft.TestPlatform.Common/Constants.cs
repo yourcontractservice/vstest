@@ -4,7 +4,7 @@
 namespace Microsoft.VisualStudio.TestPlatform.Common
 {
     /// <summary>
-    /// Defines the defaults/constants used across different components.
+    /// Defines the defaults used across different components.
     /// </summary>
     public static class TestPlatformDefaults
     {
@@ -37,5 +37,36 @@ namespace Microsoft.VisualStudio.TestPlatform.Common
         /// Default value of the boolean that determines whether or not job queue should be bounded.
         /// </summary>
         public const bool DefaultEnableBoundsOnLoggerEventQueue = true;
+    }
+
+    /// <summary>
+    /// Defines the constants used across different components.
+    /// </summary>
+    public static class TestPlatformConstants
+    {
+        /// <summary>
+        /// Pattern used to find the test adapters library using String.EndWith
+        /// </summary>
+        public const string TestAdapterEndsWithPattern = @"TestAdapter.dll";
+
+        /// <summary>
+        /// Pattern used to find the test loggers library using String.EndWith
+        /// </summary>
+        public const string TestLoggerEndsWithPattern = @"TestLogger.dll";
+
+        /// <summary>
+        /// Pattern used to find the data collectors library using String.EndWith
+        /// </summary>
+        public const string DataCollectorEndsWithPattern = @"Collector.dll";
+
+        /// <summary>
+        /// Pattern used to find the run time providers library using String.EndWith
+        /// </summary>
+        public const string RunTimeEndsWithPattern = @"RuntimeProvider.dll";
+
+        /// <summary>
+        /// Pattern used to find the settings providers library using String.EndWith
+        /// </summary>
+        public const string SettingsProviderEndsWithPattern = @"SettingsProvider.dll";
     }
 }

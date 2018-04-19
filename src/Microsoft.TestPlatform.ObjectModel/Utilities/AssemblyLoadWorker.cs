@@ -3,7 +3,7 @@
 
 namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities
 {
-#if NET46
+#if NET451
     using System;
     using System.Diagnostics;
     using System.IO;
@@ -37,14 +37,14 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities
             {
                 if (EqtTrace.IsErrorEnabled)
                 {
-                    EqtTrace.Error("AssemblyHelper:GetTargetFrameworkVersionString() caught BadImageFormatException. Falling to native binary.");
+                    EqtTrace.Error("AssemblyLoadWorker:GetTargetFrameworkVersionString() caught BadImageFormatException. Falling to native binary.");
                 }
             }
             catch (Exception ex)
             {
                 if (EqtTrace.IsErrorEnabled)
                 {
-                    EqtTrace.Error("AssemblyHelper:GetTargetFrameworkVersionString() Returning default. Unhandled exception: {0}.", ex);
+                    EqtTrace.Error("AssemblyLoadWorker:GetTargetFrameworkVersionString() Returning default. Unhandled exception: {0}.", ex);
                 }
             }
 
@@ -376,7 +376,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities
                 //Ignore all exception
                 if (EqtTrace.IsErrorEnabled)
                 {
-                    EqtTrace.Error("AssemblyLoadWorker:GetArchitectureForSource() Returning default:{0}. Unhandled exception: {1}.", "AnyCPU", ex.Message);
+                    EqtTrace.Error("AssemblyLoadWorker:GetArchitectureForSource() Returning default:{0}. Unhandled exception: {1}.", "AnyCPU", ex.ToString());
                 }
             }
 

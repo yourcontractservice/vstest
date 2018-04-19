@@ -8,10 +8,15 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
     using System.Diagnostics.Contracts;
     using System.Globalization;
     using System.IO;
+    using System.Linq;
 
-    using Microsoft.VisualStudio.TestPlatform.Client;
-    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
+    using Microsoft.VisualStudio.TestPlatform.Common;
+    using Microsoft.VisualStudio.TestPlatform.Common.Interfaces;
+    using Microsoft.VisualStudio.TestPlatform.Common.Utilities;
     using Microsoft.VisualStudio.TestPlatform.Utilities;
+    using Microsoft.VisualStudio.TestPlatform.Utilities.Helpers;
+    using Microsoft.VisualStudio.TestPlatform.Utilities.Helpers.Interfaces;
+
     using CommandLineResources = Microsoft.VisualStudio.TestPlatform.CommandLine.Resources.Resources;
 
     /// <summary>
@@ -57,7 +62,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
             {
                 if (this.executor == null)
                 {
-                    this.executor = new Lazy<IArgumentExecutor>(() => new TestAdapterPathArgumentExecutor(CommandLineOptions.Instance, TestPlatformFactory.GetTestPlatform(), ConsoleOutput.Instance));
+                    this.executor = new Lazy<IArgumentExecutor>(() => new TestAdapterPathArgumentExecutor(CommandLineOptions.Instance, RunSettingsManager.Instance, ConsoleOutput.Instance, new FileHelper()));
                 }
 
                 return this.executor;
@@ -69,7 +74,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
             }
         }
     }
-    
+
     /// <summary>
     /// The argument capabilities.
     /// </summary>
@@ -77,11 +82,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
     {
         public override string CommandName => TestAdapterPathArgumentProcessor.CommandName;
 
-        public override bool AllowMultiple => false;
+        public override bool AllowMultiple => true;
 
         public override bool IsAction => false;
 
-        public override ArgumentProcessorPriority Priority => ArgumentProcessorPriority.TestAdapterPath;
+        public override ArgumentProcessorPriority Priority => ArgumentProcessorPriority.AutoUpdateRunSettings;
 
         public override string HelpContentResourceName => CommandLineResources.TestAdapterPathHelp;
 
@@ -101,14 +106,24 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
         private CommandLineOptions commandLineOptions;
 
         /// <summary>
-        /// The test platform instance.
+        /// Run settings provider.
         /// </summary>
-        private ITestPlatform testPlatform;
+        private IRunSettingsProvider runSettingsManager;
 
         /// <summary>
         /// Used for sending output.
         /// </summary>
         private IOutput output;
+
+        /// <summary>
+        /// For file related operation
+        /// </summary>
+        private IFileHelper fileHelper;
+        
+        /// <summary>
+        /// Separators for multiple paths in argument.
+        /// </summary>
+        private readonly char[] argumentSeparators = new [] { ';' };
 
         #endregion
 
@@ -119,13 +134,14 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
         /// </summary>
         /// <param name="options"> The options. </param>
         /// <param name="testPlatform">The test platform</param>
-        public TestAdapterPathArgumentExecutor(CommandLineOptions options, ITestPlatform testPlatform, IOutput output)
+        public TestAdapterPathArgumentExecutor(CommandLineOptions options, IRunSettingsProvider runSettingsManager, IOutput output, IFileHelper fileHelper)
         {
             Contract.Requires(options != null);
 
             this.commandLineOptions = options;
-            this.testPlatform = testPlatform;
+            this.runSettingsManager = runSettingsManager;
             this.output = output;
+            this.fileHelper = fileHelper;
         }
 
         #endregion
@@ -138,6 +154,8 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
         /// <param name="argument">Argument that was provided with the command.</param>
         public void Initialize(string argument)
         {
+            string invalidAdapterPathArgument = argument;
+
             if (string.IsNullOrWhiteSpace(argument))
             {
                 throw new CommandLineException(
@@ -148,34 +166,64 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
 
             try
             {
+                var testAdapterPaths = new List<string>();
+                var testAdapterFullPaths = new List<string>();
+                
+                // VSTS task add double quotes around TestAdapterpath. For example if user has given TestAdapter path C:\temp,
+                // Then VSTS task will add TestAdapterPath as "/TestAdapterPath:\"C:\Temp\"".
                 // Remove leading and trailing ' " ' chars...
                 argument = argument.Trim().Trim(new char[] { '\"' });
 
-                customAdaptersPath = Path.GetFullPath(argument);
-                if (!Directory.Exists(customAdaptersPath))
+                // Get testadapter paths from RunSettings.
+                var testAdapterPathsInRunSettings = this.runSettingsManager.QueryRunSettingsNode("RunConfiguration.TestAdaptersPaths");
+
+                if (!string.IsNullOrWhiteSpace(testAdapterPathsInRunSettings))
                 {
-                    throw new DirectoryNotFoundException(CommandLineResources.TestAdapterPathDoesNotExist);
+                    testAdapterPaths.AddRange(SplitPaths(testAdapterPathsInRunSettings));
                 }
+                
+                testAdapterPaths.AddRange(SplitPaths(argument));
+                
+                foreach (var testadapterPath in testAdapterPaths)
+                {
+                    // TestAdaptersPaths could contain environment variables
+                    var testAdapterFullPath = Path.GetFullPath(Environment.ExpandEnvironmentVariables(testadapterPath));
+
+                    if (!this.fileHelper.DirectoryExists(testAdapterFullPath))
+                    {
+                        invalidAdapterPathArgument = testadapterPath;
+                        throw new DirectoryNotFoundException(CommandLineResources.TestAdapterPathDoesNotExist);
+                    }
+
+                    testAdapterFullPaths.Add(testAdapterFullPath);
+                }
+
+                customAdaptersPath = string.Join(";", testAdapterFullPaths.Distinct().ToArray());
+
+                this.runSettingsManager.UpdateRunSettingsNode("RunConfiguration.TestAdaptersPaths", customAdaptersPath);
             }
             catch (Exception e)
             {
                 throw new CommandLineException(
-                    string.Format(CultureInfo.CurrentCulture, CommandLineResources.InvalidTestAdapterPathCommand, argument, e.Message));
+                    string.Format(CultureInfo.CurrentCulture, CommandLineResources.InvalidTestAdapterPathCommand, invalidAdapterPathArgument, e.Message));
             }
 
             this.commandLineOptions.TestAdapterPath = customAdaptersPath;
-            var adapterFiles = new List<string>(this.GetTestAdaptersFromDirectory(customAdaptersPath));
+        }
 
-            if (adapterFiles.Count > 0)
+        /// <summary>
+        /// Splits provided paths into array.
+        /// </summary>
+        /// <param name="paths">Source paths joined by semicolons.</param>
+        /// <returns>Paths.</returns>
+        private string[] SplitPaths(string paths)
+        {
+            if (string.IsNullOrWhiteSpace(paths))
             {
-                this.testPlatform.UpdateExtensions(adapterFiles, false);
+                return new string[] { };
             }
-            else
-            {
-                // Print a warning about not finding any test adapter in provided path...
-                this.output.Warning(CommandLineResources.NoAdaptersFoundInTestAdapterPath, argument);
-                this.output.WriteLine(string.Empty, OutputLevel.Information);
-            }
+
+            return paths.Split(argumentSeparators, StringSplitOptions.RemoveEmptyEntries);
         }
 
         /// <summary>
@@ -186,16 +234,6 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
         {
             // Nothing to do since we updated the parameter during initialize parameter
             return ArgumentProcessorResult.Success;
-        }
-
-        /// <summary>
-        /// Gets the test adapters from directory.
-        /// </summary>
-        /// <param name="directory"> The directory. </param>
-        /// <returns> The list of test adapter assemblies. </returns>
-        internal virtual IEnumerable<string> GetTestAdaptersFromDirectory(string directory)
-        {
-            return Directory.EnumerateFiles(directory, @"*.TestAdapter.dll", SearchOption.AllDirectories);
         }
 
         #endregion

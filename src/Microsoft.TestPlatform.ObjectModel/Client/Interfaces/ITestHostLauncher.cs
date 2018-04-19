@@ -3,11 +3,6 @@
 
 namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Client.Interfaces
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Threading.Tasks;
-
     /// <summary>
     /// Interface defining contract for custom test host implementations
     /// </summary>

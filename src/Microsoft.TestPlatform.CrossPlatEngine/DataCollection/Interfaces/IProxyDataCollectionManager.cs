@@ -16,6 +16,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.DataCollection.Int
     public interface IProxyDataCollectionManager : IDisposable
     {
         /// <summary>
+        /// Initializes proxy datacollection manager.
+        /// </summary>
+        void Initialize();
+
+        /// <summary>
         /// Invoked before starting of test run
         /// </summary>
         /// <param name="resetDataCollectors">
@@ -48,5 +53,13 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.DataCollection.Int
         /// The <see cref="Collection"/>.
         /// </returns>
         Collection<AttachmentSet> AfterTestRunEnd(bool isCanceled, ITestMessageEventHandler runEventsHandler);
+
+        /// <summary>
+        /// Invoked after initialization of test host
+        /// </summary>
+        /// <param name="processId">
+        /// Process ID of test host
+        /// </param>
+        void TestHostLaunched(int processId);
     }
 }

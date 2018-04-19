@@ -21,9 +21,9 @@
     </header>
     <body>
       <trans-unit id="AbortedTestRun">
-        <source>The active Test Run was aborted.</source>
-        <target state="translated">A Execução de Teste ativa foi anulada.</target>
-        <note></note>
+        <source>The active test run was aborted. Reason: {0}</source>
+        <target state="translated">A execução de teste ativa foi anulada. Motivo: {0}</target>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Execução de teste ativa foi anulada.</target>
         </alt-trans>
@@ -32,29 +32,49 @@
       <trans-unit id="ConnectionClosed">
         <source>An existing connection was forcibly closed by the remote host.</source>
         <target state="translated">Uma conexão existente foi fechada à força pelo host remoto.</target>
-        <note></note>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Uma conexão existente forçosamente foi fechada pelo host remoto.</target>
         </alt-trans>
         <note from="bb-metadata">fuzzyMatch="15" wordcount="10" adjWordcount="8.5" curWordcount="8.5"</note>
       </trans-unit>
       <trans-unit id="AbortedTestDiscovery">
-        <source>The active Test Discovery was aborted.</source>
-        <target state="translated">A Descoberta de Teste ativa foi anulada.</target>
-        <note></note>
+        <source>The active test discovery was aborted. Reason: {0}</source>
+        <target state="translated">A descoberta de teste ativa foi anulada. Motivo: {0}</target>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">A detecção ativa de teste foi anulada.</target>
         </alt-trans>
         <note from="bb-metadata">fuzzyMatch="15" wordcount="6" adjWordcount="5.1" curWordcount="5.1"</note>
       </trans-unit>
       <trans-unit id="UnableToCommunicateToTestHost">
-        <source>Unable to communicate with test execution process.</source>
-        <target state="translated">Não é possível se comunicar com o processo de execução de teste.</target>
-        <note></note>
+        <source>Unable to communicate with test host process.</source>
+        <target state="translated">Não é possível se comunicar com o processo de host de teste.</target>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Não é possível se comunicar com o processo de execução de teste.</target>
         </alt-trans>
         <note from="bb-metadata">fuzzyMatch="15" wordcount="7" adjWordcount="5.95" curWordcount="5.95"</note>
+      </trans-unit>
+      <trans-unit id="UnexpectedMessage">
+        <source>Unexpected message received. Expected MessageType : {0} Actual MessageType: {1}</source>
+        <target state="translated">Mensagem inesperada recebida. MessageType esperada: {0} MessageType real: {1}</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="VersionCheckFailed">
+        <source>Protocol version check failed. Make sure test runner and host are compatible.</source>
+        <target state="translated">Falha na verificação da versão do protocolo. Verifique se o executor de testes e o host são compatíveis.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="VersionCheckTimedout">
+        <source>Failed to negotiate protocol, waiting for response timed out after {0} seconds. This may occur due to machine slowness, please set environment variable {1} to increase timeout.</source>
+        <target state="new">Falha ao negociar o protocolo. Aguarde a resposta atingir o tempo limite.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="ConnectionTimeoutErrorMessage">
+        <source>{0} process failed to connect to {1} process after {2} seconds. This may occur due to machine slowness, please set environment variable {3} to increase timeout.</source>
+        <target state="new">{0} process failed to connect to {1} process after {2} seconds. This may occur due to machine slowness, please set environment variable {3} to increase timeout.</target>
+        <note></note>
       </trans-unit>
     </body>
   </file>

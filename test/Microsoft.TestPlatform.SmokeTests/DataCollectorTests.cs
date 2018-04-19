@@ -4,34 +4,32 @@
 namespace Microsoft.TestPlatform.SmokeTests
 {
     using System.IO;
-
     using Microsoft.TestPlatform.TestUtilities;
-
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     [TestClass]
     public class DataCollectorTests : IntegrationTestBase
     {
+        private static string InProcTestResultFile = Path.Combine(Path.GetTempPath(), "inproctest.txt");
+        private const string InProDataCollectorTestProject = "SimpleTestProject.dll";
         [TestMethod]
-        [Ignore]
         public void RunAllWithInProcDataCollectorSettings()
         {
+            // Delete File if already exists
+            File.Delete(InProcTestResultFile);
+
             var runSettings = this.GetInProcDataCollectionRunsettingsFile();
 
-            this.InvokeVsTestForExecution(this.GetSampleTestAssembly(), this.GetTestAdapterPath(), runSettings);
+            this.InvokeVsTestForExecution(testEnvironment.GetTestAsset(DataCollectorTests.InProDataCollectorTestProject), this.GetTestAdapterPath(), ".NETFramework,Version=v4.5.1", runSettings);
             this.ValidateSummaryStatus(1, 1, 1);
-            this.ValidatePassedTests("SampleUnitTestProject.UnitTest1.PassingTest");
-            this.ValidateFailedTests("SampleUnitTestProject.UnitTest1.FailingTest");
-            this.ValidateSkippedTests("SampleUnitTestProject.UnitTest1.SkippingTest");
 
             ValidateInProcDataCollectionOutput();
         }
 
         private static void ValidateInProcDataCollectionOutput()
         {
-            var fileName = Path.Combine(Path.GetTempPath(), "inproctest.txt");
-            Assert.IsTrue(File.Exists(fileName), "Datacollector test file doesn't exist: {0}.", fileName);
-            var actual = File.ReadAllText(fileName);
+            Assert.IsTrue(File.Exists(InProcTestResultFile), "Datacollector test file doesn't exist: {0}.", InProcTestResultFile);
+            var actual = File.ReadAllText(InProcTestResultFile);
             var expected = @"TestSessionStart : <Configuration><Port>4312</Port></Configuration> TestCaseStart : PassingTest TestCaseEnd : PassingTest TestCaseStart : FailingTest TestCaseEnd : FailingTest TestCaseStart : SkippingTest TestCaseEnd : SkippingTest TestSessionEnd";
             actual = actual.Replace(" ", string.Empty).Replace("\r\n", string.Empty);
             expected = expected.Replace(" ", string.Empty).Replace("\r\n", string.Empty);
@@ -40,13 +38,12 @@ namespace Microsoft.TestPlatform.SmokeTests
 
         private string GetInProcDataCollectionRunsettingsFile()
         {
-            var runSettings = Path.Combine(Path.GetDirectoryName(this.GetSampleTestAssembly()), "runsettingstest.runsettings");
-            var testEnvironment = new IntegrationTestEnvironment();
+            var runSettings = Path.Combine(Path.GetDirectoryName(testEnvironment.GetTestAsset(DataCollectorTests.InProDataCollectorTestProject)), "runsettingstest.runsettings");
             var inprocasm = testEnvironment.GetTestAsset("SimpleDataCollector.dll");
             var fileContents = @"<RunSettings>
                                     <InProcDataCollectionRunSettings>
                                         <InProcDataCollectors>
-                                            <InProcDataCollector friendlyName='Test Impact' uri='InProcDataCollector://Microsoft/TestImpact/1.0' assemblyQualifiedName='SimpleDataCollector.SimpleDataCollector, SimpleDataCollector, Version=1.0.0.0, Culture=neutral, PublicKeyToken=7ccb7239ffde675a'  codebase={0}>
+                                            <InProcDataCollector friendlyName='Test Impact' uri='InProcDataCollector://Microsoft/TestImpact/1.0' assemblyQualifiedName='SimpleDataCollector.SimpleDataCollector, {0}'  codebase='{1}'>
                                                 <Configuration>
                                                     <Port>4312</Port>
                                                 </Configuration>
@@ -55,7 +52,7 @@ namespace Microsoft.TestPlatform.SmokeTests
                                     </InProcDataCollectionRunSettings>
                                 </RunSettings>";
 
-            fileContents = string.Format(fileContents, "'" + inprocasm + "'");
+            fileContents = string.Format(fileContents, AssemblyUtility.GetAssemblyName(inprocasm), inprocasm);
             File.WriteAllText(runSettings, fileContents);
 
             return runSettings;

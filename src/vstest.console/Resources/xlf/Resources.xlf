@@ -89,18 +89,17 @@
       </trans-unit>
       <trans-unit id="EnableLoggersArgumentHelp">
         <source>--logger|/logger:&lt;Logger Uri/FriendlyName&gt;
-          Specify a logger for test results.  For example, to log results into a
-          Visual Studio Test Results File (TRX) use  /logger:trx [;LogFileName=&lt;Defaults to unique file name&gt;]
-          Creates file in TestResults directory with given LogFileName.
-          
-          To publish test results to Team Foundation Server, use TfsPublisher as shown below
-          Example: /logger:TfsPublisher;
-          Collection=&lt;team project collection url&gt;;
-                BuildName=&lt;build name&gt;;
-                TeamProject=&lt;team project name&gt;
-                [;Platform=&lt;Defaults to "Any CPU"&gt;]
-                [;Flavor=&lt;Defaults to "Debug"&gt;]
-                [;RunTitle=&lt;title&gt;]</source>
+      Specify a logger for test results. For example, to log results into a 
+      Visual Studio Test Results File (TRX) use /logger:trx[;LogFileName=&lt;Defaults to unique file name&gt;]
+      Creates file in TestResults directory with given LogFileName.
+
+      Change the verbosity level in log messages for console logger as shown below
+      Example: /logger:console;verbosity=&lt;Defaults to "normal"&gt;
+      Allowed values for verbosity: quiet, minimal, normal and detailed.
+
+      Change the diagnostic level prefix for console logger as shown below
+      Example: /logger:console;prefix=&lt;Defaults to "false"&gt;
+      More info on Console Logger here : https://aka.ms/console-logger</source>
         <note></note>
       </trans-unit>
       <trans-unit id="HelpDescriptionText">
@@ -112,7 +111,7 @@
         <note>Section Header for subsequent command help listing</note>
       </trans-unit>
       <trans-unit id="HelpUsageText">
-        <source>Usage: vstest.console.exe [Arguments] [Options] [[--] &lt;args&gt;...]]</source>
+        <source>Usage: vstest.console.exe [Arguments] [Options] [[--] &lt;RunSettings arguments&gt;...]]</source>
         <note></note>
       </trans-unit>
       <trans-unit id="MissingTestSourceFile">
@@ -160,10 +159,6 @@
         <source>Argument {0} is not expected in the 'InIsolation' command. Specify the command without the argument (Example: vstest.console.exe myTests.dll /InIsolation) and try again.</source>
         <note></note>
       </trans-unit>
-      <trans-unit id="SuggestUseVsixExtensionsIfNoTestsIsFound">
-        <source>Additionally, you can try specifying '/UseVsixExtensions' command if the test discoverer &amp; executor is installed on the machine as vsix extensions and your installation supports vsix extensions. Example: vstest.console.exe myTests.dll /UseVsixExtensions:true</source>
-        <note></note>
-      </trans-unit>
       <trans-unit id="UseVsixExtensionsValueRequired">
         <source>The /UseVsixExtensions parameter requires a value. If 'true', the installed VSIX extensions (if any) will be used in the test run. If false, they will be ignored.   Example:  /UseVsixExtensions:true</source>
         <note></note>
@@ -173,7 +168,7 @@
         <note></note>
       </trans-unit>
       <trans-unit id="InIsolationHelp">
-        <source>/InIsolation
+        <source>--InIsolation|/InIsolation
       Runs the tests in an isolated process. This makes vstest.console.exe 
       process less likely to be stopped on an error in the tests, but tests 
       may run slower.</source>
@@ -195,10 +190,8 @@
         <note></note>
       </trans-unit>
       <trans-unit id="Examples">
-        <source>  To run tests in the same process:
+        <source>  To run tests:
     &gt;vstest.console.exe tests.dll 
-  To run tests in a separate process:
-    &gt;vstest.console.exe /inIsolation tests.dll
   To run tests with additional settings such as  data collectors:
     &gt;vstest.console.exe  tests.dll /Settings:Local.RunSettings</source>
         <note></note>
@@ -225,7 +218,7 @@
       </trans-unit>
       <trans-unit id="ListTestsHelp">
         <source>-lt|--ListTests|/lt|/ListTests:&lt;File Name&gt;
-      Lists discovered tests from the given test container.</source>
+      Lists all discovered tests from the given test container.</source>
         <note></note>
       </trans-unit>
       <trans-unit id="TimeElapsed">
@@ -265,32 +258,12 @@
         <source>Diagnostic data adapters are not supported when running unit tests for Windows Store apps. Remove diagnostic data adapters settings from settings.</source>
         <note></note>
       </trans-unit>
-      <trans-unit id="NoTestsFoundWarningMessageWithSuggestionToUseVsix">
-        <source>{0} {1}</source>
-        <note></note>
-      </trans-unit>
       <trans-unit id="LoggerFriendlyNameFormat">
         <source>        FriendlyName: {0}</source>
         <note></note>
       </trans-unit>
       <trans-unit id="ExtensionUriFormat">
         <source>        Uri: {0}</source>
-        <note></note>
-      </trans-unit>
-      <trans-unit id="SuggestUseVsixExtensionsInListLoggersCommand">
-        <source>The Test Logger Add-Ins installed through a VSIX installation are ignored. Use the /UseVsixExtensions parameter to include them, if your installation supports vsix extensions. Example: vstest.console.exe {0} /UseVsixExtensions:true</source>
-        <note></note>
-      </trans-unit>
-      <trans-unit id="SuggestUseVsixExtensionsInListExecutorsCommand">
-        <source>The Test Executor Add-Ins installed through a VSIX installation are ignored. Use the /UseVsixExtensions parameter to include them, if your installation supports vsix extensions. Example: vstest.console.exe {0} /UseVsixExtensions:true</source>
-        <note></note>
-      </trans-unit>
-      <trans-unit id="SuggestUseVsixExtensionsInListDiscoverersCommand">
-        <source>The Test Discovery Add-Ins installed through a VSIX installation are ignored. Use the /UseVsixExtensions parameter to include them, if your installation supports vsix extensions. Example: vstest.console.exe {0} /UseVsixExtensions:true</source>
-        <note></note>
-      </trans-unit>
-      <trans-unit id="SuggestUseVsixExtensionsInListSettingsProviderCommand">
-        <source>The Settings Providers Add-Ins installed through a VSIX installation are ignored. Use the /UseVsixExtensions parameter to include them, if your installation supports vsix extensions. Example: vstest.console.exe {0} /UseVsixExtensions:true</source>
         <note></note>
       </trans-unit>
       <trans-unit id="SettingFormat">
@@ -338,16 +311,16 @@
       <trans-unit id="FrameworkArgumentHelp">
         <source>--Framework|/Framework:&lt;Framework Version&gt;
       Target .Net Framework version to be used for test execution. 
-      Valid values are ".NETFramework,Version=v4.6", ".NETCoreApp,Version=v1.0" etc.
-      Other supported values are Framework35, Framework40, Framework45 and FrameworkCore10.</source>
+      Valid values are ".NETFramework,Version=v4.5.1", ".NETCoreApp,Version=v1.0" etc.
+      Other supported values are Framework35, Framework40, Framework45, FrameworkCore10 and FrameworkUap10.</source>
         <note></note>
       </trans-unit>
       <trans-unit id="FrameworkVersionRequired">
-        <source>The /Framework argument requires the target .Net Framework version for the test run.   Example:  /Framework:".NETFramework,Version=v4.6"</source>
+        <source>The /Framework argument requires the target .Net Framework version for the test run.   Example:  /Framework:".NETFramework,Version=v4.5.1"</source>
         <note></note>
       </trans-unit>
       <trans-unit id="InvalidFrameworkVersion">
-        <source>Invalid .Net Framework version:{0}. Please give the fullname of the TargetFramework. Other supported .Net Framework versions are Framework35, Framework40 and Framework45.</source>
+        <source>Invalid .Net Framework version:{0}. Please give the fullname of the TargetFramework. Other supported .Net Framework versions are Framework35, Framework40, Framework45, FrameworkCore10 and FrameworkUap10.</source>
         <note></note>
       </trans-unit>
       <trans-unit id="AppContainerTestPrerequisiteFail">
@@ -398,16 +371,11 @@
       </trans-unit>
       <trans-unit id="EnableCodeCoverageArgumentProcessorHelp">
         <source>/EnableCodeCoverage
-      Enables data diagnostic adapter 'CodeCoverage' in the test run. Default 
-      settings are used if not specified using settings file.</source>
+      Enables data collector 'CodeCoverage' for the test run.</source>
         <note></note>
       </trans-unit>
       <trans-unit id="InvalidEnableCodeCoverageCommand">
         <source>Argument {0} is not expected in the 'EnableCodeCoverage' command. Specify the command without the argument (Example: vstest.console.exe myTests.dll /EnableCodeCoverage) and try again.</source>
-        <note></note>
-      </trans-unit>
-      <trans-unit id="MalformedRunSettingsFile">
-        <source>Settings file provided do not confirm to required format. </source>
         <note></note>
       </trans-unit>
       <trans-unit id="NoTestEntryPoint">
@@ -634,6 +602,177 @@
       <trans-unit id="DesignModeClientTimeoutError">
         <source>Timeout to connect or process request for DesignModeClient on port: {0}</source>
         <target state="new">Timeout to connect or process request for DesignModeClient on port: {0}</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="NotRunTestIndicator">
+        <source>Not Run  {0}</source>
+        <target state="new">Not Run  {0}</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="CLIRunSettingsArgumentHelp">
+        <source>RunSettings arguments:
+      Arguments to pass runsettings configurations through commandline. Arguments may be specified as name-value pair of the form [name]=[value] after "-- ". Note the space after --. 
+      Use a space to separate multiple [name]=[value].
+      More info on RunSettings arguments support: https://aka.ms/vstest-runsettings-arguments</source>
+        <target state="new">Args:
+      Any extra arguments that should be passed to adapter. Arguments may be specified as name-value pair of the form &lt;n&gt;=&lt;v&gt;, where &lt;n&gt; is the argument name, and &lt;v&gt; is the argument value. Use a space to separate multiple arguments.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="MalformedRunSettingsKey">
+        <source>One or more runsettings provided contain invalid token</source>
+        <target state="new">One or more runsettings provided contain invalid token</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="ResultsDirectoryArgumentHelp">
+        <source>--ResultsDirectory|/ResultsDirectory
+      Test results directory will be created in specified path if not exists.
+      Example  /ResultsDirectory:&lt;pathToResultsDirectory&gt;</source>
+        <target state="new">--ResultsDirectory|/ResultsDirectory
+      Test results directory will be created in specified path if not exists.
+      Example  /ResultsDirectory:&lt;pathToResultsDirectory&gt;</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="ResultsDirectoryValueRequired">
+        <source>The /ResultsDirectory parameter requires a value, where the test results should be saved. Example:  /ResultsDirectory:c:\MyTestResultsDirectory</source>
+        <target state="new">The /ResultsDirectory parameter requires a value, where the test results should be saved. Example:  /ResultsDirectory:c:\MyTestResultsDirectory</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="InvalidResultsDirectoryPathCommand">
+        <source>The path '{0}' specified in the 'ResultsDirectory' is invalid. Error: {1}</source>
+        <target state="new">The path '{0}' specified in the 'ResultsDirectory' is invalid. Error: {1}</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="InIsolationDeprecated">
+        <source>The /InIsolation flag is deprecated. The tests are always run in a separate process</source>
+        <target state="new">The /InIsolation flag is deprecated. The tests are always run in a separate process</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="VstestDiagLogOutputPath">
+        <source>Logging Vstest Diagnostics in file: {0}</source>
+        <target state="new">Logging Vstest Diagnostics in file: {0}</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="CollectArgumentHelp">
+        <source>--Collect|/Collect:&lt;DataCollector FriendlyName&gt;
+      Enables data collector for the test run. More info here : https://aka.ms/vstest-collect</source>
+        <target state="new">CollectArgumentHelp</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="DataCollectorFriendlyNameInvalid">
+        <source>The Data Collector friendly name '{0}' is not valid.  The Data Collector will be ignored.</source>
+        <target state="new">The Data Collector friendly name '{0}' is not valid.  The Data Collector will be ignored.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="DbgTrcMessagesBanner">
+        <source>Debug Traces Messages:</source>
+        <target state="new">Debug Traces Messages:</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="EnableBlameUsage">
+        <source>--Blame|/Blame
+      Runs the test in blame mode. This option is helpful in isolating the problematic test causing test host crash. It creates an output file in the current directory as "Sequence.xml", that captures the order of execution of test before the crash.</source>
+        <target state="new">--Blame|/Blame
+      Enable Blame mode to get name of the faulty test case in event of a test host crash.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="TestRunAborted">
+        <source>Test Run Aborted.</source>
+        <target state="new">Test Run Aborted.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="TestRunCanceled">
+        <source>Test Run Canceled.</source>
+        <target state="new">Test Run Canceled.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="OpenResponseFileError">
+        <source>Error opening response file '{0}'</source>
+        <target state="new">Error opening response file '{0}'</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="ResponseFileArgumentHelp">
+        <source>@&lt;file&gt;
+      Read response file for more options.</source>
+        <target state="new">@&lt;file&gt;
+      Read response file for more options.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="TestRunSummaryForCanceledOrAbortedRun">
+        <source>Total tests: Unknown. Passed: {0}. Failed: {1}. Skipped: {2}.</source>
+        <target state="new">Total tests: Unknown. Passed: {0}. Failed: {1}. Skipped: {2}.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="StringFormatToJoinTwoStrings">
+        <source>{0} {1}</source>
+        <target state="new">{0} {1}</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="SuggestTestAdapterPathIfNoTestsIsFound">
+        <source>Additionally, path to test adapters can be specified using /TestAdapterPath command. Example  /TestAdapterPath:&lt;pathToCustomAdapters&gt;.</source>
+        <target state="new">Additionally, you can point to location of test executors and discoverers by specifying &amp;apos;/TestAdapterPath&amp;apos; command. Example  /TestAdapterPath:&amp;lt;pathToCustomAdapters&amp;gt;.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="UseVsixExtensionsDeprecation">
+        <source>/UseVsixExtensions is getting deprecated. Please use /TestAdapterPath instead.</source>
+        <target state="new">/UseVsixExtensions is getting deprecated. Please use /TestAdapterPath instead.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="DisableAutoFakesUsage">
+        <source>--DisableAutoFakes|/DisableAutoFakes:&lt;true/false&gt;
+     Example: /DisableAutoFakes:true</source>
+        <target state="new">--DisableAutoFakes|/DisableAutoFakes:&lt;true/false&gt;
+     Example: /DisableAutoFakes:true</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="CollectWithTestSettingErrorMessage">
+        <source>--Collect|/Collect:"{0}" is not supported if test run is configured using testsettings.</source>
+        <target state="new">--Collect|/Collect:"{0}" is not supported if test run is configured using testsettings.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="RunsettingsWithDCErrorMessage">
+        <source>Data collectors other than Code Coverage and Microsoft Fakes configured via run settings are not supported with embedded test settings. Please see https://aka.ms/vstest-configure-datacollector for more information. Run settings: {0}.</source>
+        <target state="new">DataCollector:"{0}" in runsettings in not supported if test run is configured using testsettings.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="EnableLoggerArgumentsInNetCore">
+        <source>--logger|/logger:&lt;Logger Uri/FriendlyName&gt;
+      Specify a logger for test results. For example, to log results into a 
+      Visual Studio Test Results File (TRX) use /logger:trx[;LogFileName=&lt;Defaults to unique file name&gt;]
+      Creates file in TestResults directory with given LogFileName.
+
+      Change the verbosity level in log messages for console logger as shown below
+      Example: /logger:console;verbosity=&lt;Defaults to "minimal"&gt;
+      Allowed values for verbosity: quiet, minimal, normal and detailed.
+
+      Change the diagnostic level prefix for console logger as shown below
+      Example: /logger:console;prefix=&lt;Defaults to "false"&gt;
+      More info on Console Logger here : https://aka.ms/console-logger</source>
+        <target state="new">--logger|/logger:&lt;Logger Uri/FriendlyName&gt;
+      Specify a logger for test results. For example, to log results into a 
+      Visual Studio Test Results File (TRX) use /logger:trx[;LogFileName=&lt;Defaults to unique file name&gt;]
+      Creates file in TestResults directory with given LogFileName.
+
+      Change the verbosity level in log messages for console logger as shown below
+      Example: /logger:console;verbosity=&lt;Defaults to "minimal"&gt;
+      Allowed values for verbosity: quiet, minimal, normal and detailed.
+
+      Change the diagnostic level prefix for console logger as shown below
+      Example: /logger:console;prefix=&lt;Defaults to "false"&gt;
+      More info on Console Logger here : https://aka.ms/console-logger
+
+      To publish test results to Team Foundation Server, use TfsPublisher as shown below
+      Example: /logger:TfsPublisher;
+                Collection=&lt;team project collection url&gt;;
+                BuildName=&lt;build name&gt;;
+                TeamProject=&lt;team project name&gt;
+                [;Platform=&lt;Defaults to "Any CPU"&gt;]
+                [;Flavor=&lt;Defaults to "Debug"&gt;]
+                [;RunTitle=&lt;title&gt;]</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="BlameCollectDumpNotSupportedForPlatform">
+        <source>CollectDump option for Blame is not supported for this platform.</source>
+        <target state="new">CollectDump option for Blame is not supported for this platform.</target>
         <note></note>
       </trans-unit>
     </body>

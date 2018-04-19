@@ -10,27 +10,26 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.DataCollection
     /// Base class for all execution event arguments
     /// </summary>
 #if NET451
-    [Serializable] 
+    [Serializable]
 #endif
     public abstract class DataCollectionEventArgs : EventArgs
     {
         #region Constructor
 
         /// <summary>
-        /// Initializes the instance by storing the given information
+        /// Default constructor added for serialization/deserialization.
         /// </summary>
-        /// <param name="context">Context information for the event</param>
-        protected DataCollectionEventArgs(DataCollectionContext context) :
-            this(context, null)
+        public DataCollectionEventArgs()
         {
         }
 
-        protected DataCollectionEventArgs(DataCollectionContext context, Uri targetDataCollectorUri)
+        /// <summary>
+        /// Initializes the instance by storing the given information
+        /// </summary>
+        /// <param name="context">Context information for the event</param>
+        protected DataCollectionEventArgs(DataCollectionContext context)
         {
-            //EqtTrace.FailIf(context == null, "Context should not be null.");
-
             Context = context;
-            TargetDataCollectorUri = targetDataCollectorUri;
         }
 
         #endregion
@@ -43,16 +42,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.DataCollection
         public DataCollectionContext Context
         {
             get;
-            private set;
-        }
-
-        /// <summary>
-        /// Gets or sets Data collector Uri this notification is targeted for
-        /// </summary>
-        public Uri TargetDataCollectorUri
-        {
-            get;
-            set;
+            internal set;
         }
 
         #endregion

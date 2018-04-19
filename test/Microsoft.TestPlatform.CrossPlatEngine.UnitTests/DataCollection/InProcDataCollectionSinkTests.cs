@@ -35,7 +35,7 @@ namespace TestPlatform.CrossPlatEngine.UnitTests.DataCollection
         public void SendDataShouldAddKeyValueToDictionaryInSink()
         {
             this.testCase.SetPropertyValue(TestCaseProperties.Id, Guid.NewGuid());
-            this.dataCollectionSink.SendData(this.dataCollectionContext, "DummyKey", "DummyValue");            
+            this.dataCollectionSink.SendData(this.dataCollectionContext, "DummyKey", "DummyValue");
 
             var dict = ((InProcDataCollectionSink)this.dataCollectionSink).GetDataCollectionDataSetForTestCase(this.testCase.Id);
 
@@ -43,7 +43,7 @@ namespace TestPlatform.CrossPlatEngine.UnitTests.DataCollection
         }
 
         [TestMethod]
-        
+
         public void SendDataShouldThrowArgumentExceptionIfKeyIsNull()
         {
             this.testCase.SetPropertyValue(TestCaseProperties.Id, Guid.NewGuid());
@@ -67,19 +67,6 @@ namespace TestPlatform.CrossPlatEngine.UnitTests.DataCollection
         {
             Assert.ThrowsException<ArgumentNullException>(
                 () => this.dataCollectionSink.SendData(this.dataCollectionContext, "DummyKey", "DummyValue"));
-        }
-
-        [TestMethod]
-        public void GetDataCollectionDataSetForTestCaseShouldRemoveTestCaseAfterRetunredTheData()
-        {
-            this.testCase.SetPropertyValue(TestCaseProperties.Id, Guid.NewGuid());
-            this.dataCollectionSink.SendData(this.dataCollectionContext, "DummyKey", "DummyValue");
-
-            var dict = ((InProcDataCollectionSink)this.dataCollectionSink).GetDataCollectionDataSetForTestCase(this.testCase.Id);
-            Assert.AreEqual<string>(dict["DummyKey"].ToString(), "DummyValue");
-
-            var emptyDict = ((InProcDataCollectionSink)this.dataCollectionSink).GetDataCollectionDataSetForTestCase(this.testCase.Id);
-            Assert.AreEqual<int>(emptyDict.Keys.Count, 0);
         }
     }
 }

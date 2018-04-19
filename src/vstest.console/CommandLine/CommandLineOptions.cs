@@ -14,6 +14,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
     using Utilities.Helpers.Interfaces;
 
     using CommandLineResources = Microsoft.VisualStudio.TestPlatform.CommandLine.Resources.Resources;
+    using System.IO;
 
     /// <summary>
     /// Provides access to the command-line options.
@@ -77,10 +78,10 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
         /// <summary>
         /// Default constructor.
         /// </summary>
-        private CommandLineOptions()
+        protected CommandLineOptions()
         {
             this.BatchSize = DefaultBatchSize;
-            this.TestRunStatsEventTimeout = this.DefaultRetrievalTimeout;
+            this.TestStatsEventTimeout = this.DefaultRetrievalTimeout;
             this.FileHelper = new FileHelper();
 #if TODO
             UseVsixExtensions = Utilities.GetAppSettingValue(UseVsixExtensionsKey, false);
@@ -95,6 +96,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
         /// Specifies whether parallel execution is on or off.
         /// </summary>
         public bool Parallel { get; set; }
+
+        /// <summary>
+        /// Specifies whether InIsolation is on or off.
+        /// </summary>
+        public bool InIsolation { get; set; }
 
         /// <summary>
         /// Readonly collection of all available test sources
@@ -115,7 +121,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
         /// <summary>
         /// Specifies whether the Fakes automatic configuration should be disabled.
         /// </summary>
-        public bool DisableAutoFakes { get; set; }
+        public bool DisableAutoFakes { get; set; } = false;
 
         /// <summary>
         /// Specifies whether vsixExtensions is enabled or not. 
@@ -158,14 +164,19 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
         public long BatchSize { get; set; }
 
         /// <summary>
-        /// Specifies the timeout of the runStats event
+        /// Specifies the timeout of the test stats cache timeout event
         /// </summary>
-        public TimeSpan TestRunStatsEventTimeout { get; set; }
+        public TimeSpan TestStatsEventTimeout { get; set; }
 
         /// <summary>
         /// Test case filter value for run with sources.
         /// </summary>
         public string TestCaseFilterValue { get; set; }
+
+        /// <summary>
+        /// Target Path used by ListFullyQualifiedTests option
+        /// </summary>
+        public string ListTestsTargetPath { get; set; }
 
         /// <summary>
         /// Specifies the Target Device
@@ -198,6 +209,27 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
                 this.ArchitectureSpecified = true;
             }
         }
+
+        /// <summary>
+        /// True indicates the test run is started from an Editor or IDE.
+        /// Defaults to false.
+        /// </summary>
+        public bool IsDesignMode
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        /// If not already set from IDE in the runSettings, ShouldCollectSourceInformation defaults to IsDesignMode value        
+        /// </summary>
+        public bool ShouldCollectSourceInformation
+        {
+            get
+            {
+                return IsDesignMode;
+            }
+        }        
 
         /// <summary>
         /// Specifies if /Platform has been specified on command line or not.
@@ -253,6 +285,13 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
             }
 
             source = source.Trim();
+
+            // Convert the relative path to absolute path
+            if(!Path.IsPathRooted(source))
+            {
+                source = Path.Combine(FileHelper.GetCurrentDirectory(), source);
+            }
+
             if (!FileHelper.Exists(source))
             {
                 throw new CommandLineException(

@@ -5,6 +5,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
 {
     using System;
     using System.Collections.Generic;
+    using System.Net;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -13,32 +14,38 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
     using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Interfaces;
     using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel;
-    using System.Linq;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Logging;
+    using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions;
+    using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions.Interfaces;
 
     /// <summary>
     /// The design mode client.
     /// </summary>
     public class DesignModeClient : IDesignModeClient
     {
-        private readonly ICommunicationManager communicationManager;
-
-        private readonly IDataSerializer dataSerializer;
-
-        protected Action<Message> onAckMessageReceived;
-
-        private object ackLockObject = new object();
-
         /// <summary>
         /// The timeout for the client to connect to the server.
         /// </summary>
         private const int ClientListenTimeOut = 5 * 1000;
 
+        private readonly ICommunicationManager communicationManager;
+
+        private readonly IDataSerializer dataSerializer;
+
+        private object ackLockObject = new object();
+
+        private ProtocolConfig protocolConfig = Constants.DefaultProtocolConfig;
+
+        private IEnvironment platformEnvironment;
+
+        protected Action<Message> onAckMessageReceived;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="DesignModeClient"/> class.
         /// </summary>
         public DesignModeClient()
-            : this(new SocketCommunicationManager(), JsonDataSerializer.Instance)
+            : this(new SocketCommunicationManager(), JsonDataSerializer.Instance, new PlatformEnvironment())
         {
         }
 
@@ -51,10 +58,14 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
         /// <param name="dataSerializer">
         /// The data Serializer.
         /// </param>
-        internal DesignModeClient(ICommunicationManager communicationManager, IDataSerializer dataSerializer)
+        /// <param name="platformEnvironment">
+        /// The platform Environment
+        /// </param>
+        internal DesignModeClient(ICommunicationManager communicationManager, IDataSerializer dataSerializer, IEnvironment platformEnvironment)
         {
             this.communicationManager = communicationManager;
             this.dataSerializer = dataSerializer;
+            this.platformEnvironment = platformEnvironment;
         }
 
         /// <summary>
@@ -82,7 +93,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
         public void ConnectToClientAndProcessRequests(int port, ITestRequestManager testRequestManager)
         {
             EqtTrace.Info("Trying to connect to server on port : {0}", port);
-            this.communicationManager.SetupClientAsync(port);
+            this.communicationManager.SetupClientAsync(new IPEndPoint(IPAddress.Loopback, port));
 
             // Wait for the connection to the server and listen for requests.
             if (this.communicationManager.WaitForServerConnection(ClientListenTimeOut))
@@ -103,6 +114,10 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
             // Dispose off the communications to end the session
             // this should end the "ProcessRequests" loop with an exception
             this.Dispose();
+
+            EqtTrace.Info("DesignModeClient: Parent process exited, Exiting myself..");
+
+            this.platformEnvironment.Exit(1);
         }
 
         /// <summary>
@@ -121,31 +136,33 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
                 {
                     var message = this.communicationManager.ReceiveMessage();
 
-                    EqtTrace.Info("DesignModeClient: Processing Message of message type: {0}", message.MessageType);
+                    if (EqtTrace.IsInfoEnabled)
+                    {
+                        EqtTrace.Info("DesignModeClient.ProcessRequests: Processing Message: {0}", message);
+                    }
+
                     switch (message.MessageType)
                     {
                         case MessageType.VersionCheck:
                             {
-                                // At this point, we cannot add stuff to object model like "ProtocolVersionMessage"
-                                // as that cannot be acessed from testwindow which still uses TP-V1
-                                // we are sending a version number as an integer for now
-                                // TODO: Find a better way without breaking TW which using TP-V1
-                                var payload = 1;
-                                this.communicationManager.SendMessage(MessageType.VersionCheck, payload);
+                                var version = this.dataSerializer.DeserializePayload<int>(message);
+                                this.protocolConfig.Version = Math.Min(version, this.protocolConfig.Version);
+                                this.communicationManager.SendMessage(MessageType.VersionCheck, this.protocolConfig.Version);
                                 break;
                             }
 
                         case MessageType.ExtensionsInitialize:
                             {
+                                // Do not filter the Editor/IDE provided extensions by name
                                 var extensionPaths = this.communicationManager.DeserializePayload<IEnumerable<string>>(message);
-                                testRequestManager.InitializeExtensions(extensionPaths);
+                                testRequestManager.InitializeExtensions(extensionPaths, skipExtensionFilters: true);
                                 break;
                             }
 
                         case MessageType.StartDiscovery:
                             {
-                                var discoveryPayload = message.Payload.ToObject<DiscoveryRequestPayload>();
-                                testRequestManager.DiscoverTests(discoveryPayload, new DesignModeTestEventsRegistrar(this));
+                                var discoveryPayload = this.dataSerializer.DeserializePayload<DiscoveryRequestPayload>(message); 
+                                this.StartDiscovery(discoveryPayload, testRequestManager);
                                 break;
                             }
 
@@ -202,7 +219,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
                             }
                     }
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     EqtTrace.Error("DesignModeClient: Error processing request: {0}", ex);
                     isSessionEnd = true;
@@ -218,6 +235,9 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
         /// <param name="testProcessStartInfo">
         /// The test Process Start Info.
         /// </param>
+        /// <returns>
+        /// The <see cref="int"/>.
+        /// </returns>
         public int LaunchCustomHost(TestProcessStartInfo testProcessStartInfo)
         {
             lock (ackLockObject)
@@ -274,13 +294,14 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
                     var customLauncher = skipTestHostLaunch ?
                         DesignModeTestHostLauncherFactory.GetCustomHostLauncherForTestRun(this, testRunPayload) : null;
 
-                    testRequestManager.RunTests(testRunPayload, customLauncher, new DesignModeTestEventsRegistrar(this));
+                    testRequestManager.RunTests(testRunPayload, customLauncher, new DesignModeTestEventsRegistrar(this), this.protocolConfig);
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
-                    // If there is an exception during test run request creation or some time during the process
-                    // In such cases, TestPlatform will never send a TestRunComplete event and IDE need to be sent a run complete message
-                    // We need recoverability in translationlayer-designmode scenarios 
+                    EqtTrace.Error("DesignModeClient: Exception in StartTestRun: " + ex);
+
+                    var testMessagePayload = new TestMessagePayload { MessageLevel = TestMessageLevel.Error, Message = ex.ToString() };
+                    this.communicationManager.SendMessage(MessageType.TestMessage, testMessagePayload);
                     var runCompletePayload = new TestRunCompletePayload()
                     {
                         TestRunCompleteArgs = new TestRunCompleteEventArgs(null, false, true, ex, null, TimeSpan.MinValue),
@@ -291,6 +312,36 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
                     this.communicationManager.SendMessage(MessageType.ExecutionComplete, runCompletePayload);
                 }
             });
+        }
+
+        private void StartDiscovery(DiscoveryRequestPayload discoveryRequestPayload, ITestRequestManager testRequestManager)
+        {
+            Task.Run(
+                delegate
+                {
+                    try
+                    {
+                        testRequestManager.ResetOptions();
+                        testRequestManager.DiscoverTests(discoveryRequestPayload, new DesignModeTestEventsRegistrar(this), this.protocolConfig);
+                    }
+                    catch (Exception ex)
+                    {
+                        EqtTrace.Error("DesignModeClient: Exception in StartDiscovery: " + ex);
+
+                        var testMessagePayload = new TestMessagePayload { MessageLevel = TestMessageLevel.Error, Message = ex.ToString() };
+                        this.communicationManager.SendMessage(MessageType.TestMessage, testMessagePayload);
+
+                        var payload = new DiscoveryCompletePayload()
+                        {
+                            IsAborted = true,
+                            LastDiscoveredTests = null,
+                            TotalTests = -1
+                        };
+
+                        // Send run complete to translation layer
+                        this.communicationManager.SendMessage(MessageType.DiscoveryComplete, payload);
+                    }
+                });
         }
 
         #region IDisposable Support

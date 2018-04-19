@@ -3,76 +3,63 @@
 
 namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.EventHandlers
 {
-
     using System;
-
-    using Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.DataCollection;
-#if !NET46
-    using System.Runtime.Loader;
-#endif
-    using Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Execution;
+    using Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.DataCollection.Interfaces;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel.DataCollection;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel.Engine;
+    using Microsoft.VisualStudio.TestPlatform.Utilities;
 
     /// <summary>
     /// The test case events handler.
     /// </summary>
-    internal class TestCaseEventsHandler : ITestCaseEventsHandler
+    internal class TestCaseEventsHandler : ITestCaseEventsHandler, ITestEventsPublisher
     {
+        public event EventHandler<SessionStartEventArgs> SessionStart;
 
-        private InProcDataCollectionExtensionManager inProcDataCollectionExtensionManager;
-        private ITestCaseEventsHandler testCaseEvents;
+        public event EventHandler<SessionEndEventArgs> SessionEnd;
+
+        public event EventHandler<TestCaseStartEventArgs> TestCaseStart;
+
+        public event EventHandler<TestCaseEndEventArgs> TestCaseEnd;
+
+        public event EventHandler<TestResultEventArgs> TestResult;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TestCaseEventsHandler"/> class.
         /// </summary>
-        /// <param name="inProcDCExtMgr">
-        /// The in proc tidc helper.
-        /// </param>
-        public TestCaseEventsHandler(InProcDataCollectionExtensionManager inProcDataCollectionExtensionManager, ITestCaseEventsHandler testCaseEvents)
+        public TestCaseEventsHandler()
         {
-            this.inProcDataCollectionExtensionManager = inProcDataCollectionExtensionManager;
-            this.testCaseEvents = testCaseEvents;
         }
 
-        /// <summary>
-        /// The send test case start.
-        /// </summary>
-        /// <param name="testCase">
-        /// The test case.
-        /// </param>
+        /// <inheritdoc />
         public void SendTestCaseStart(TestCase testCase)
         {
-            this.inProcDataCollectionExtensionManager.TriggerTestCaseStart(testCase);
-            this.testCaseEvents?.SendTestCaseStart(testCase);
+            this.TestCaseStart.SafeInvoke(this, new TestCaseStartEventArgs(testCase), "TestCaseEventsHandler.RaiseTestCaseStart");
         }
 
-        /// <summary>
-        /// The send test case end.
-        /// </summary>
-        /// <param name="testCase">
-        /// The test case.
-        /// </param>
-        /// <param name="outcome">
-        /// The outcome.
-        /// </param>
+        /// <inheritdoc />
         public void SendTestCaseEnd(TestCase testCase, TestOutcome outcome)
         {
-            this.inProcDataCollectionExtensionManager.TriggerTestCaseEnd(testCase, outcome);
-            this.testCaseEvents?.SendTestCaseEnd(testCase, outcome);
+            this.TestCaseEnd.SafeInvoke(this, new TestCaseEndEventArgs(testCase, outcome), "TestCaseEventsHandler.RaiseTestCaseEnd");
         }
 
-        /// <summary>
-        /// The send test result.
-        /// </summary>
-        /// <param name="result">
-        /// The result.
-        /// </param>
-        public bool SendTestResult(TestResult result)
+        /// <inheritdoc />
+        public void SendTestResult(TestResult result)
         {
-            var flushResult = this.inProcDataCollectionExtensionManager.TriggerUpdateTestResult(result);
-            this.testCaseEvents?.SendTestResult(result);
-            return flushResult;
+            this.TestResult.SafeInvoke(this, new TestResultEventArgs(result), "TestCaseEventsHandler.RaiseTestCaseEnd");
+        }
+
+        /// <inheritdoc />
+        public void SendSessionStart()
+        {
+            this.SessionStart.SafeInvoke(this, new SessionStartEventArgs(), "TestCaseEventsHandler.RaiseSessionStart");
+        }
+
+        /// <inheritdoc />
+        public void SendSessionEnd()
+        {
+            this.SessionEnd.SafeInvoke(this, new SessionEndEventArgs(), "TestCaseEventsHandler.RaiseSessionEnd");
         }
     }
 }

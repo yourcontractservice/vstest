@@ -1,35 +1,65 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Microsoft.TestPlatform.VsTestConsole.TranslationLayer;
-using Microsoft.TestPlatform.VsTestConsole.TranslationLayer.Interfaces;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel.Logging;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace Microsoft.TestPlatform.TranslationLayer.E2ETest
 {
-    using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.EventHandlers;
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.IO;
+    using System.Linq;
+    using System.Threading;
+
+    using Microsoft.TestPlatform.VsTestConsole.TranslationLayer;
+    using Microsoft.TestPlatform.VsTestConsole.TranslationLayer.Interfaces;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client.Interfaces;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Logging;
 
     public class Program
     {
-        public static void Main(string[] args)
+        public const string DefaultRunSettings = "<RunSettings><RunConfiguration></RunConfiguration></RunSettings>";
+        public static int Main(string[] args)
         {
-            // Spawn of vstest.console with a run tests from the current execting folder.
-            var executingLocation = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
-            var runnerLocation = Path.Combine(executingLocation, "vstest.console.exe");
-            var testadapterPath = Path.Combine(executingLocation, "Adapter\\Microsoft.VisualStudio.TestPlatform.MSTest.TestAdapter.dll");
-            var testAssembly = Path.Combine(executingLocation, "UnitTestProject.dll");
+            if (args == null || args.Length < 1)
+            {
+                Console.WriteLine(@"Please provide appropriate arguments. Arguments can be passed as following:");
+                Console.WriteLine(@"Microsoft.TestPlatform.TranslationLayer.E2ETest.exe --runner:'[vstest.console path]' --testassembly:'[assemblyPath]' --testadapterpath:'[path]'");
+                Console.WriteLine(@"Example: Microsoft.TestPlatform.TranslationLayer.E2ETest.exe --runner:'c:\tmp\vstest.console.dll' --testassembly:'c:\a\a.tests.dll' --testadapterpath:'c:\a\Microsoft.VisualStudio.TestPlatform.MSTest.TestAdapter.dll'");
 
-            IVsTestConsoleWrapper consoleWrapper = new VsTestConsoleWrapper(runnerLocation);
+                return 1;
+            }
+
+            string runnerLocation = string.Empty;
+            string testadapterPath = string.Empty;
+            string testAssembly = string.Empty;
+
+            var separator = new char[] { ':' };
+            foreach (var arg in args)
+            {
+                if (arg.StartsWith("-p:") || arg.StartsWith("--testadapterpath:"))
+                {
+                    testadapterPath = arg.Split(separator, 2)[1];
+                }
+                else if (arg.StartsWith("-a:") || arg.StartsWith("--testassembly:"))
+                {
+                    testAssembly = arg.Split(separator, 2)[1];
+                }
+                else if (arg.StartsWith("-r:") || arg.StartsWith("--runner:"))
+                {
+                    runnerLocation = arg.Split(separator, 2)[1];
+                }
+            }
+
+            Console.WriteLine("Parameters:");
+            Console.WriteLine("Runner Path: " + runnerLocation);
+            Console.WriteLine("Test Assembly Path: " + testAssembly);
+            Console.WriteLine("Test Adapter Path: " + testadapterPath);
+            Console.WriteLine("-------------------------------------------------------");
+
+            var logFilePath = Path.Combine(Directory.GetCurrentDirectory(), @"log.txt");
+            IVsTestConsoleWrapper consoleWrapper = new VsTestConsoleWrapper(runnerLocation, new ConsoleParameters { LogFilePath = logFilePath });
 
             consoleWrapper.StartSession();
             consoleWrapper.InitializeExtensions(new List<string>() { testadapterPath });
@@ -59,13 +89,21 @@ namespace Microsoft.TestPlatform.TranslationLayer.E2ETest
             Console.WriteLine("Run All (custom launcher) Test Result: " + testresults?.FirstOrDefault()?.TestCase?.DisplayName + " :" + testresults?.FirstOrDefault()?.Outcome);
 
             Console.WriteLine("-------------------------------------------------------");
+
+            testresults = RunAllTestsWithTestCaseFilter(consoleWrapper, new List<string>() { testAssembly });
+
+            Console.WriteLine("Run All Test Count: " + testresults?.Count());
+            Console.WriteLine("Run All Test Result: " + testresults?.FirstOrDefault()?.TestCase?.DisplayName + " :" + testresults?.FirstOrDefault()?.Outcome);
+            Console.WriteLine("-------------------------------------------------------");
+
+            return 0;
         }
 
         static IEnumerable<TestCase> DiscoverTests(IEnumerable<string> sources, IVsTestConsoleWrapper consoleWrapper)
         {
             var waitHandle = new AutoResetEvent(false);
             var handler = new DiscoveryEventHandler(waitHandle);
-            consoleWrapper.DiscoverTests(sources, null, handler);
+            consoleWrapper.DiscoverTests(sources, DefaultRunSettings, handler);
 
             waitHandle.WaitOne();
 
@@ -76,7 +114,7 @@ namespace Microsoft.TestPlatform.TranslationLayer.E2ETest
         {
             var waitHandle = new AutoResetEvent(false);
             var handler = new RunEventHandler(waitHandle);
-            consoleWrapper.RunTests(testCases, null, handler);
+            consoleWrapper.RunTests(testCases, DefaultRunSettings, handler);
 
             waitHandle.WaitOne();
             return handler.TestResults;
@@ -86,7 +124,17 @@ namespace Microsoft.TestPlatform.TranslationLayer.E2ETest
         {
             var waitHandle = new AutoResetEvent(false);
             var handler = new RunEventHandler(waitHandle);
-            consoleWrapper.RunTests(sources, null, handler);
+            consoleWrapper.RunTests(sources, DefaultRunSettings, handler);
+
+            waitHandle.WaitOne();
+            return handler.TestResults;
+        }
+
+        static IEnumerable<TestResult> RunAllTestsWithTestCaseFilter(IVsTestConsoleWrapper consoleWrapper, IEnumerable<string> sources)
+        {
+            var waitHandle = new AutoResetEvent(false);
+            var handler = new RunEventHandler(waitHandle);
+            consoleWrapper.RunTests(sources, DefaultRunSettings, new TestPlatformOptions() { TestCaseFilter= "FullyQualifiedName=UnitTestProject.UnitTest.PassingTest" }, handler);
 
             waitHandle.WaitOne();
             return handler.TestResults;
@@ -97,7 +145,7 @@ namespace Microsoft.TestPlatform.TranslationLayer.E2ETest
             var runCompleteSignal = new AutoResetEvent(false);
             var processExitedSignal = new AutoResetEvent(false);
             var handler = new RunEventHandler(runCompleteSignal);
-            consoleWrapper.RunTestsWithCustomTestHost(list, String.Empty, handler, new CustomTestHostLauncher(() => processExitedSignal.Set()));
+            consoleWrapper.RunTestsWithCustomTestHost(list, DefaultRunSettings, handler, new CustomTestHostLauncher(() => processExitedSignal.Set()));
 
             // Test host exited signal comes after the run complete
             processExitedSignal.WaitOne();

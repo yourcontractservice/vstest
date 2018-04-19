@@ -7,8 +7,8 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests.Processors
     using TestPlatform.CommandLine.Processors;
     using System;
     using System.IO;
-    using Microsoft.VisualStudio.TestPlatform.CommandLine.Processors.Utilities;
     using vstest.console.UnitTests.Processors;
+    using Microsoft.VisualStudio.TestPlatform.Common.Utilities;
 
     [TestClass]
     public class ResultsDirectoryArgumentProcessorTests
@@ -50,7 +50,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests.Processors
         {
             var capabilities = new ResultsDirectoryArgumentProcessorCapabilities();
             Assert.AreEqual("/ResultsDirectory", capabilities.CommandName);
-            Assert.AreEqual("--ResultsDirectory|/ResultsDirectory\n      Test results directory will be created in specified path if not exists. \n      Example:  /ResultsDirectory:<pathToResultsDirectory>", capabilities.HelpContentResourceName);
+            Assert.AreEqual("--ResultsDirectory|/ResultsDirectory" + Environment.NewLine + "      Test results directory will be created in specified path if not exists." + Environment.NewLine + "      Example  /ResultsDirectory:<pathToResultsDirectory>", capabilities.HelpContentResourceName);
 
             Assert.AreEqual(HelpContentPriority.ResultsDirectoryArgumentProcessorHelpPriority, capabilities.HelpPriority);
             Assert.AreEqual(false, capabilities.IsAction);

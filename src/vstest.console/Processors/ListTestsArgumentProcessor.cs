@@ -10,10 +10,10 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
 
     using Microsoft.VisualStudio.TestPlatform.Client.RequestHelper;
     using Microsoft.VisualStudio.TestPlatform.CommandLine;
-    using Microsoft.VisualStudio.TestPlatform.CommandLine.Processors.Utilities;
     using Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers;
     using Microsoft.VisualStudio.TestPlatform.Common;
     using Microsoft.VisualStudio.TestPlatform.Common.Interfaces;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
     using Microsoft.VisualStudio.TestPlatform.Utilities;
 
@@ -94,7 +94,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
 
         public override bool AllowMultiple => false;
 
-        public override bool IsAction => true; 
+        public override bool IsAction => true;
 
         public override ArgumentProcessorPriority Priority => ArgumentProcessorPriority.Normal;
 
@@ -148,7 +148,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
         public ListTestsArgumentExecutor(
             CommandLineOptions options,
             IRunSettingsProvider runSettingsProvider,
-            ITestRequestManager testRequestManager) : 
+            ITestRequestManager testRequestManager) :
                 this(options, runSettingsProvider, testRequestManager, ConsoleOutput.Instance)
         {
         }
@@ -207,14 +207,18 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
             }
 
             this.output.WriteLine(CommandLineResources.ListTestsHeaderMessage, OutputLevel.Information);
+            if (!string.IsNullOrEmpty(EqtTrace.LogFile))
+            {
+                this.output.Information(false, CommandLineResources.VstestDiagLogOutputPath, EqtTrace.LogFile);
+            }
 
             var runSettings = this.runSettingsManager.ActiveRunSettings.SettingsXml;
 
-            var success = this.testRequestManager.DiscoverTests(
+            this.testRequestManager.DiscoverTests(
                 new DiscoveryRequestPayload() { Sources = this.commandLineOptions.Sources, RunSettings = runSettings },
-                this.discoveryEventsRegistrar);
+                this.discoveryEventsRegistrar, Constants.DefaultProtocolConfig);
 
-            return success ? ArgumentProcessorResult.Success : ArgumentProcessorResult.Fail;
+            return ArgumentProcessorResult.Success;
         }
 
         #endregion
@@ -222,11 +226,6 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
         private class DiscoveryEventsRegistrar : ITestDiscoveryEventsRegistrar
         {
             private IOutput output;
-
-            /// <summary>
-            /// Specifies whether some tests were found in the sources or not.        
-            /// </summary>
-            private bool? testsFoundInAnySource = false;
 
             public DiscoveryEventsRegistrar(IOutput output)
             {
@@ -241,7 +240,6 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
             public void UnregisterDiscoveryEvents(IDiscoveryRequest discoveryRequest)
             {
                 discoveryRequest.OnDiscoveredTests -= this.discoveryRequest_OnDiscoveredTests;
-                this.testsFoundInAnySource = null;
             }
 
             private void discoveryRequest_OnDiscoveredTests(Object sender, DiscoveredTestsEventArgs args)
@@ -249,12 +247,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
                 // List out each of the tests.
                 foreach (var test in args.DiscoveredTestCases)
                 {
-                    if (!testsFoundInAnySource.Value)
-                    {
-                        testsFoundInAnySource = true;
-                    }
-
-                    output.WriteLine(String.Format(CultureInfo.CurrentUICulture,
+                    this.output.WriteLine(String.Format(CultureInfo.CurrentUICulture,
                                                     CommandLineResources.AvailableTestsFormat,
                                                     test.DisplayName),
                                        OutputLevel.Information);

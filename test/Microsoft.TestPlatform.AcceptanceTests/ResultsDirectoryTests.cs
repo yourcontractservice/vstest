@@ -9,13 +9,13 @@ namespace Microsoft.TestPlatform.AcceptanceTests
     [TestClass]
     public class ResultsDirectoryTests : AcceptanceTestBase
     {
-        [CustomDataTestMethod]
-        [NET46TargetFramework]
-        [NETCORETargetFramework]
-        public void TrxFileShouldBeCreatedInResultsDirectory(string runnerFramework, string targetFramework, string targetRuntime)
+        [TestMethod]
+        [NetFullTargetFrameworkDataSource]
+        [NetCoreTargetFrameworkDataSource]
+        public void TrxFileShouldBeCreatedInResultsDirectory(RunnerInfo runnerInfo)
         {
-            AcceptanceTestBase.SetTestEnvironment(this.testEnvironment, runnerFramework, targetFramework, targetRuntime);
-            var arguments = PrepareArguments(this.GetSampleTestAssembly(), this.GetTestAdapterPath(), string.Empty, this.FrameworkArgValue);
+            AcceptanceTestBase.SetTestEnvironment(this.testEnvironment, runnerInfo);
+            var arguments = PrepareArguments(this.GetSampleTestAssembly(), this.GetTestAdapterPath(), string.Empty, this.FrameworkArgValue, runnerInfo.InIsolationValue);
             var trxFileName = "TestResults.trx";
             var resultsDir = Path.GetTempPath();
             var trxFilePath = Path.Combine(resultsDir, trxFileName);
@@ -30,16 +30,14 @@ namespace Microsoft.TestPlatform.AcceptanceTests
             Assert.IsTrue(File.Exists(trxFilePath), $"Expected Trx file: {trxFilePath} not created in results directory");
         }
 
-        //Getting Current directory C:\Windows\system32  https://github.com/Microsoft/vstest/issues/311
-        //Failed to create relative directory
-        [Ignore]
-        [CustomDataTestMethod]
-        [NET46TargetFramework]
-        [NETCORETargetFramework]
-        public void ResultsDirectoryRelativePathShouldWork(string runnerFramework, string targetFramework, string targetRuntime)
+        [TestMethod]
+        [NetFullTargetFrameworkDataSource]
+        [NetCoreTargetFrameworkDataSource]
+        public void ResultsDirectoryRelativePathShouldWork(RunnerInfo runnerInfo)
         {
-            AcceptanceTestBase.SetTestEnvironment(this.testEnvironment, runnerFramework, targetFramework, targetRuntime);
-            var arguments = PrepareArguments(this.GetSampleTestAssembly(), this.GetTestAdapterPath(), string.Empty, this.FrameworkArgValue);
+            AcceptanceTestBase.SetTestEnvironment(this.testEnvironment, runnerInfo);
+
+            var arguments = PrepareArguments(this.GetSampleTestAssembly(), this.GetTestAdapterPath(), string.Empty, this.FrameworkArgValue, runnerInfo.InIsolationValue);
             var trxFileName = "TestResults.trx";
             var relativeDirectory = @"relative\directory";
             var resultsDirectory = Path.Combine(Directory.GetCurrentDirectory(), relativeDirectory);
@@ -50,7 +48,7 @@ namespace Microsoft.TestPlatform.AcceptanceTests
 
             if (Directory.Exists(resultsDirectory))
             {
-                Directory.Delete(resultsDirectory);
+                Directory.Delete(resultsDirectory, true);
             }
 
             this.InvokeVsTest(arguments);

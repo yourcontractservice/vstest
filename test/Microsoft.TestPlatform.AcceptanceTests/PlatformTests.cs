@@ -15,12 +15,12 @@ namespace Microsoft.TestPlatform.AcceptanceTests
         /// <summary>
         /// The run test execution with platform x64.
         /// </summary>
-        [CustomDataTestMethod]
-        [NET46TargetFramework]
-        [NETCORETargetFramework]
-        public void RunTestExecutionWithPlatformx64(string runnerFramework, string targetFramework, string targetRuntime)
+        [TestMethod]
+        [NetFullTargetFrameworkDataSource]
+        [NetCoreTargetFrameworkDataSource]
+        public void RunTestExecutionWithPlatformx64(RunnerInfo runnerInfo)
         {
-            AcceptanceTestBase.SetTestEnvironment(this.testEnvironment, runnerFramework, targetFramework, targetRuntime);
+            AcceptanceTestBase.SetTestEnvironment(this.testEnvironment, runnerInfo);
 
             var platformArg = " /Platform:x64";
             string testhostProcessName = string.Empty;
@@ -34,12 +34,12 @@ namespace Microsoft.TestPlatform.AcceptanceTests
         /// <summary>
         /// The run test execution with platform x86.
         /// </summary>
-        [CustomDataTestMethod]
-        [NET46TargetFramework]
-        [NETCORETargetFramework]
-        public void RunTestExecutionWithPlatformx86(string runnerFramework, string targetFramework, string targetRuntime)
+        [TestMethod]
+        [NetFullTargetFrameworkDataSource]
+        [NetCoreTargetFrameworkDataSource]
+        public void RunTestExecutionWithPlatformx86(RunnerInfo runnerInfo)
         {
-            AcceptanceTestBase.SetTestEnvironment(this.testEnvironment, runnerFramework, targetFramework, targetRuntime);
+            AcceptanceTestBase.SetTestEnvironment(this.testEnvironment, runnerInfo);
 
             var platformArg = " /Platform:x86";
             string testhostProcessName = string.Empty;
@@ -76,8 +76,8 @@ namespace Microsoft.TestPlatform.AcceptanceTests
             var arguments = PrepareArguments(
                 this.GetSampleTestAssembly(),
                 this.GetTestAdapterPath(),
-                string.Empty,
-                this.FrameworkArgValue);
+                string.Empty, this.FrameworkArgValue,
+                this.testEnvironment.InIsolationValue);
             arguments = string.Concat(arguments, platformArg);
 
             var cts = new CancellationTokenSource();
@@ -92,7 +92,7 @@ namespace Microsoft.TestPlatform.AcceptanceTests
             Assert.AreEqual(
                 expectedNumOfProcessCreated,
                 numOfProcessCreatedTask.Result,
-                $"Number of {testhostProcessName} process created, expected: {expectedNumOfProcessCreated} actual: {numOfProcessCreatedTask.Result} args: {arguments} runner path: {this.testEnvironment.GetConsoleRunnerPath()}");
+                $"Number of {testhostProcessName} process created, expected: {expectedNumOfProcessCreated} actual: {numOfProcessCreatedTask.Result} args: {arguments} runner path: {this.GetConsoleRunnerPath()}");
             this.ValidateSummaryStatus(1, 1, 1);
         }
     }

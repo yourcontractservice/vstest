@@ -22,8 +22,8 @@
     <body>
       <trans-unit id="InvalidStateForExecution">
         <source>The test run could not be executed because the initial state was invalid.</source>
-        <target state="translated" state-qualifier="mt-suggestion">İlk durum geçersiz olduğundan test çalıştırması yürütülemedi.</target>
-        <note></note>
+        <target state="translated">İlk durum geçersiz olduğundan test çalıştırması yürütülemedi.</target>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Test çalışmasının başlangıç durumu geçersiz olduğundan çalıştırılamadı.</target>
         </alt-trans>
@@ -31,12 +31,22 @@
       </trans-unit>
       <trans-unit id="WaitForCompletionOperationIsNotAllowedWhenNoTestRunIsActive">
         <source>Wait for completion operation is not allowed when there is no active test run. </source>
-        <target state="translated" state-qualifier="mt-suggestion">Etkin bir test çalıştırması olmadığında tamamlanmasını bekleme işlemine izin verilmez. </target>
-        <note></note>
+        <target state="translated">Etkin bir test çalıştırması olmadığında tamamlanmasını bekleme işlemine izin verilmez. </target>
+        <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Hiçbir etkin test çalışma olduğunda tamamlama işlemi izin verilmez için bekleyin.</target>
         </alt-trans>
         <note from="bb-metadata">fuzzyMatch="15" wordcount="14" adjWordcount="11.9" curWordcount="11.9"</note>
+      </trans-unit>
+      <trans-unit id="TestSessionTimeoutMessage">
+        <source>Aborting test run: test run timeout of {0} milliseconds exceeded.</source>
+        <target state="translated">Test çalıştırması durduruluyor: Test çalıştırması için {0} milisaniyelik zaman aşımına ulaşıldı.</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="NoTestHostProviderFound">
+        <source>No suitable test runtime provider found for this run.</source>
+        <target state="translated">Bu çalıştırma için uygun bir test çalışma zamanı sağlayıcısı yok.</target>
+        <note />
       </trans-unit>
     </body>
   </file>

@@ -3,6 +3,7 @@
 
 namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
 {
+    using System;
     using System.Runtime.Versioning;
 
     /// <summary>
@@ -10,8 +11,8 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
     /// </summary>
     public class Framework
     {
-#if NET46
-        private static readonly Framework Default = Framework.FromString(".NETFramework,Version=v4.6");
+#if NET451
+        private static readonly Framework Default = Framework.FromString(".NETFramework,Version=v4.0");
 #else
         private static readonly Framework Default = Framework.FromString(".NETCoreApp,Version=v1.0");
 #endif
@@ -42,6 +43,11 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
         /// <returns>A framework object</returns>
         public static Framework FromString(string frameworkString)
         {
+            if (string.IsNullOrWhiteSpace(frameworkString))
+            {
+                return null;
+            }
+
             FrameworkName frameworkName;
             try
             {
@@ -50,19 +56,22 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
             }
             catch
             {
-                switch (frameworkString.Trim())
+                switch (frameworkString.Trim().ToLower())
                 {
-                    case "Framework35":
-                        frameworkName = new FrameworkName(".NETFramework,Version=v3.5");
+                    case "framework35":
+                        frameworkName = new FrameworkName(Constants.DotNetFramework35);
                         break;
-                    case "Framework40":
-                        frameworkName = new FrameworkName(".NETFramework,Version=v4.0");
+                    case "framework40":
+                        frameworkName = new FrameworkName(Constants.DotNetFramework40);
                         break;
-                    case "Framework45":
-                        frameworkName = new FrameworkName(".NETFramework,Version=v4.5");
+                    case "framework45":
+                        frameworkName = new FrameworkName(Constants.DotNetFramework45);
                         break;
-                    case "FrameworkCore10":
-                        frameworkName = new FrameworkName(".NETCoreApp,Version=1.0");
+                    case "frameworkcore10":
+                        frameworkName = new FrameworkName(Constants.DotNetFrameworkCore10);
+                        break;
+                    case "frameworkuap10":
+                        frameworkName = new FrameworkName(Constants.DotNetFrameworkUap10);
                         break;
                     default:
                         return null;
@@ -71,7 +80,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
 
             return new Framework() { Name = frameworkName.FullName, Version = frameworkName.Version.ToString() };
         }
-        
+
         /// <summary>
         /// Returns full name of the framework.
         /// </summary>

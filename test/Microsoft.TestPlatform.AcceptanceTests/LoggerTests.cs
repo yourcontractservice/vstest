@@ -12,23 +12,43 @@ namespace Microsoft.TestPlatform.AcceptanceTests
     [TestClass]
     public class LoggerTests : AcceptanceTestBase
     {
-        [CustomDataTestMethod]
-        [NET46TargetFramework]
-        [NETCORETargetFramework]
-        public void TrxLoggerShouldProperlyOverwriteFile(string runnerFramework, string targetFramework, string targetRuntime)
+        [TestMethod]
+        [NetFullTargetFrameworkDataSource(inIsolation: true, inProcess: true)]
+        public void TrxLoggerWithFriendlyNameShouldProperlyOverwriteFile(RunnerInfo runnerInfo)
         {
-            AcceptanceTestBase.SetTestEnvironment(this.testEnvironment, runnerFramework, targetFramework, targetRuntime);
-            var arguments = PrepareArguments(this.GetSampleTestAssembly(), this.GetTestAdapterPath(), string.Empty, this.FrameworkArgValue);
+            AcceptanceTestBase.SetTestEnvironment(this.testEnvironment, runnerInfo);
+
+            var arguments = PrepareArguments(this.GetSampleTestAssembly(), this.GetTestAdapterPath(), string.Empty, this.FrameworkArgValue, runnerInfo.InIsolationValue);
             var trxFileName = "TestResults.trx";
             arguments = string.Concat(arguments, $" /logger:\"trx;LogFileName={trxFileName}\"");
             this.InvokeVsTest(arguments);
 
-            arguments = PrepareArguments(this.GetSampleTestAssembly(), this.GetTestAdapterPath(), string.Empty, this.FrameworkArgValue);
+            arguments = PrepareArguments(this.GetSampleTestAssembly(), this.GetTestAdapterPath(), string.Empty, this.FrameworkArgValue, runnerInfo.InIsolationValue);
             arguments = string.Concat(arguments, $" /logger:\"trx;LogFileName={trxFileName}\"");
             arguments = string.Concat(arguments, " /testcasefilter:Name~Pass");
             this.InvokeVsTest(arguments);
 
             var trxLogFilePath = Path.Combine(Directory.GetCurrentDirectory(), "TestResults",  trxFileName);
+            Assert.IsTrue(IsValidXml(trxLogFilePath), "Invalid content in Trx log file");
+        }
+
+        [TestMethod]
+        [NetCoreTargetFrameworkDataSource]
+        public void TrxLoggerWithExecutorUriShouldProperlyOverwriteFile(RunnerInfo runnerInfo)
+        {
+            AcceptanceTestBase.SetTestEnvironment(this.testEnvironment, runnerInfo);
+
+            var arguments = PrepareArguments(this.GetSampleTestAssembly(), this.GetTestAdapterPath(), string.Empty, this.FrameworkArgValue, runnerInfo.InIsolationValue);
+            var trxFileName = "TestResults.trx";
+            arguments = string.Concat(arguments, $" /logger:\"logger://Microsoft/TestPlatform/TrxLogger/v1;LogFileName{trxFileName}\"");
+            this.InvokeVsTest(arguments);
+
+            arguments = PrepareArguments(this.GetSampleTestAssembly(), this.GetTestAdapterPath(), string.Empty, this.FrameworkArgValue, runnerInfo.InIsolationValue);
+            arguments = string.Concat(arguments, $" /logger:\"logger://Microsoft/TestPlatform/TrxLogger/v1;LogFileName={trxFileName}\"");
+            arguments = string.Concat(arguments, " /testcasefilter:Name~Pass");
+            this.InvokeVsTest(arguments);
+
+            var trxLogFilePath = Path.Combine(Directory.GetCurrentDirectory(), "TestResults", trxFileName);
             Assert.IsTrue(IsValidXml(trxLogFilePath), "Invalid content in Trx log file");
         }
 

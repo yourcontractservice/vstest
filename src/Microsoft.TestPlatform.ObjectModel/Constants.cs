@@ -3,9 +3,12 @@
 
 namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
 {
+    using System;
     using System.IO;
 
     using Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
+    using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions;
 
     /// <summary>
     /// Defines the defaults/constants used across different components.
@@ -28,9 +31,79 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
         public const string InProcDataCollectorsSettingName = "InProcDataCollectors";
 
         /// <summary>
-        /// Name of data collection settigns node in RunSettings.
+        /// Name of collect dump option for blame.
+        /// </summary>
+        public const string BlameCollectDumpKey = "CollectDump";
+
+        /// <summary>
+        /// Name of data collection settings node in RunSettings.
         /// </summary>
         public const string DataCollectionRunSettingsName = "DataCollectionRunSettings";
+
+        /// <summary>
+        /// Name of logger run settings node in RunSettings.
+        /// </summary>
+        public const string LoggerRunSettingsName = "LoggerRunSettings";
+
+        /// <summary>
+        /// Name of loggers node in RunSettings.
+        /// </summary>
+        public const string LoggersSettingName = "Loggers";
+
+        /// <summary>
+        /// Name of logger node in RunSettings.
+        /// </summary>
+        public const string LoggerSettingName = "Logger";
+
+        /// <summary>
+        /// Name of friendlyName attribute of logger node.
+        /// </summary>
+        public const string LoggerFriendlyName = "friendlyName";
+
+        /// <summary>
+        /// Name of friendlyName attribute of logger node in lower case.
+        /// </summary>
+        public const string LoggerFriendlyNameLower = "friendlyname";
+
+        /// <summary>
+        /// Name of uri attribute of logger node.
+        /// </summary>
+        public const string LoggerUriName = "uri";
+
+        /// <summary>
+        /// Name of assemblyQualifiedName attribute of logger node.
+        /// </summary>
+        public const string LoggerAssemblyQualifiedName = "assemblyQualifiedName";
+
+        /// <summary>
+        /// Name of assemblyQualifiedName attribute of logger node in lower case.
+        /// </summary>
+        public const string LoggerAssemblyQualifiedNameLower = "assemblyqualifiedname";
+
+        /// <summary>
+        /// Name of codeBase attribute of logger node.
+        /// </summary>
+        public const string LoggerCodeBase = "codeBase";
+
+        /// <summary>
+        /// Name of codeBase attribute of logger node in lower case.
+        /// </summary>
+        public const string LoggerCodeBaseLower = "codebase";
+
+        /// <summary>
+        /// Name of enabled attribute of logger node.
+        /// </summary>
+        public const string LoggerEnabledName = "enabled";
+
+        /// <summary>
+        /// Name of configuration element of logger node.
+        /// </summary>
+        public const string LoggerConfigurationName = "Configuration";
+
+        /// <summary>
+        /// Name of configuration element of logger node in lower case.
+        /// </summary>
+        public const string LoggerConfigurationNameLower = "configuration";
 
         /// <summary>
         /// Name of RunConfiguration settings node in RunSettings.
@@ -61,14 +134,28 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
         public const string TraceLogMaxFileSizeInKB = "TraceLogMaxFileSizeInKb";
 
         public const string EmptyRunSettings = @"<RunSettings></RunSettings>";
-        
 
         public static readonly Architecture DefaultPlatform = XmlRunSettingsUtilities.OSArchitecture == Architecture.ARM ? Architecture.ARM : Architecture.X86;
-        
+
+        /// <summary>
+        /// Adding this for compatibility
+        /// </summary>
+        public const FrameworkVersion DefaultFramework = FrameworkVersion.Framework40;
+
         /// <summary>
         /// Default option for parallel execution
         /// </summary>
         public const int DefaultCpuCount = 1;
+
+        /// <summary>
+        /// The default batch size.
+        /// </summary>
+        public const long DefaultBatchSize = 10;
+
+        /// <summary>
+        /// The default protocol version
+        /// </summary>
+        public static readonly ProtocolConfig DefaultProtocolConfig = new ProtocolConfig { Version = 2 };
 
         /// <summary>
         /// Name of the results directory
@@ -86,17 +173,37 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
         public const bool DefaultTreatTestAdapterErrorsAsWarnings = false;
 
         /// <summary>
+        /// The default execution thread apartment state.
+        /// </summary>
+        [CLSCompliant(false)]
+#if NET451
+        // Keeping default STA thread for desktop tests for UI/Functional test scenarios
+        public static readonly PlatformApartmentState DefaultExecutionThreadApartmentState = PlatformApartmentState.STA;
+#else
+        // STA threads are not supported for net core, default to MTA
+        public static readonly PlatformApartmentState DefaultExecutionThreadApartmentState = PlatformApartmentState.MTA;
+#endif
+
+        /// <summary>
         ///  Contants for detecting .net framework.
         /// </summary>
         public const string TargetFrameworkAttributeFullName = "System.Runtime.Versioning.TargetFrameworkAttribute";
 
         public const string DotNetFrameWorkStringPrefix = ".NETFramework,Version=";
 
+        public const string DotNetFramework35 = ".NETFramework,Version=v3.5";
+
         public const string DotNetFramework40 = ".NETFramework,Version=v4.0";
 
         public const string DotNetFramework45 = ".NETFramework,Version=v4.5";
 
+        public const string DotNetFramework451 = ".NETFramework,Version=v4.5.1";
+
         public const string DotNetFramework46 = ".NETFramework,Version=v4.6";
+
+        public const string DotNetFrameworkCore10 = ".NETCoreApp,Version=v1.0";
+
+        public const string DotNetFrameworkUap10 = "Uap,Version=v10.0";
 
         public const string TargetFrameworkName = "TargetFrameworkName";
     }

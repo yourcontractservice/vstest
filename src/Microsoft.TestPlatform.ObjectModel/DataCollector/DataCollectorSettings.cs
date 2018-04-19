@@ -103,11 +103,32 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
         {
             XmlDocument doc = new XmlDocument();
             XmlElement root = doc.CreateElement(dataCollectorName);
-            AppendAttribute(doc, root, "uri", this.Uri.ToString());
-            AppendAttribute(doc, root, "assemblyQualifiedName", this.AssemblyQualifiedName);
-            AppendAttribute(doc, root, "friendlyName", this.FriendlyName);
+            if (this.Uri != null)
+            {
+                AppendAttribute(doc, root, "uri", this.Uri.ToString());
+            }
 
-            root.AppendChild(doc.ImportNode(this.Configuration, true));
+            if (!string.IsNullOrWhiteSpace(this.AssemblyQualifiedName))
+            {
+                AppendAttribute(doc, root, "assemblyQualifiedName", this.AssemblyQualifiedName);
+            }
+
+            if (!string.IsNullOrWhiteSpace(this.FriendlyName))
+            {
+                AppendAttribute(doc, root, "friendlyName", this.FriendlyName);
+            }
+
+            AppendAttribute(doc, root, "enabled", this.IsEnabled.ToString());
+
+            if (!string.IsNullOrWhiteSpace(this.CodeBase))
+            {
+                AppendAttribute(doc, root, "codebase", this.CodeBase);
+            }
+
+            if (this.Configuration != null)
+            {
+                root.AppendChild(doc.ImportNode(this.Configuration, true));
+            }
 
             return root;
         }
@@ -139,7 +160,15 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
                     {
                         case "uri":
                             ValidateArg.NotNullOrEmpty(reader.Value, "uri");
-                            settings.Uri = new Uri(reader.Value);
+                            try
+                            {
+                                settings.Uri = new Uri(reader.Value);
+                            }
+                            catch (UriFormatException)
+                            {
+                                throw new SettingsException(String.Format(CultureInfo.CurrentCulture, Resources.Resources.InvalidDataCollectorUriInSettings, reader.Value));
+                            }
+
                             break;
 
                         case "assemblyQualifiedName":
@@ -172,18 +201,10 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
 
             }
 
-            if (settings.Uri == null)
+            if (string.IsNullOrWhiteSpace(settings.FriendlyName))
             {
                 throw new SettingsException(
-                    String.Format(CultureInfo.CurrentCulture, Resources.Resources.MissingDataCollectorAttributes, "Uri"));
-            }
-            if (settings.AssemblyQualifiedName == null)
-            {
-                throw new SettingsException(
-                    String.Format(
-                        CultureInfo.CurrentCulture,
-                        Resources.Resources.MissingDataCollectorAttributes,
-                        "AssemblyQualifiedName"));
+                    String.Format(CultureInfo.CurrentCulture, Resources.Resources.MissingDataCollectorAttributes, "FriendlyName"));
             }
 
             reader.Read();

@@ -51,54 +51,45 @@ namespace Microsoft.VisualStudio.TestPlatform.Utilities
         [SuppressMessage("Microsoft.Security.Xml", "CA3053:UseXmlSecureResolver",
             Justification = "XmlDocument.XmlResolver is not available in core. Suppress until fxcop issue is fixed.")]
         internal static void AppendOrModifyChild(
-            XPathNavigator parentNavigator,
+            XmlDocument xmlDocument,
             string nodeXPath,
             string nodeName,
             string innerXml)
         {
-            var childNodeNavigator = parentNavigator.SelectSingleNode(nodeXPath);
+            var childNode = xmlDocument.SelectSingleNode(nodeXPath);
 
             // Todo: There isn't an equivalent API to SecurityElement.Escape in Core yet. 
             // So trusting that the XML is always valid for now.
-#if NET46
+#if NET451
             var secureInnerXml = SecurityElement.Escape(innerXml);
 #else
             var secureInnerXml = innerXml;
 #endif
-            if (childNodeNavigator == null)
+            if (childNode == null)
             {
-                var doc = new XmlDocument();
-                var childElement = doc.CreateElement(nodeName);
+                var childElement = xmlDocument.CreateElement(nodeName);
 
                 if (!string.IsNullOrEmpty(innerXml))
                 {
                     childElement.InnerXml = secureInnerXml;
                 }
 
-                childNodeNavigator = childElement.CreateNavigator();
-                parentNavigator.AppendChild(childNodeNavigator);
+                var parentNode = xmlDocument.SelectSingleNode(nodeXPath.Substring(0, nodeXPath.LastIndexOf('/')));
+                parentNode?.AppendChild(childElement);
             }
             else if (!string.IsNullOrEmpty(innerXml))
             {
-                try
-                {
-                    childNodeNavigator.InnerXml = secureInnerXml;
-                }
-                catch (XmlException)
-                {
-                    // .Net Core has a bug where calling childNodeNavigator.InnerXml throws an XmlException with "Data at the root level is invalid".
-                    // So doing the below instead.
-                    var doc = new XmlDocument();
+                childNode.InnerXml = secureInnerXml;
+            }
+        }
 
-                    var childElement = doc.CreateElement(nodeName);
-
-                    if (!string.IsNullOrEmpty(innerXml))
-                    {
-                        childElement.InnerXml = secureInnerXml;
-                    }
-
-                    childNodeNavigator.ReplaceSelf(childElement.CreateNavigator().OuterXml);
-                }
+        internal static void RemoveChildNode(XPathNavigator parentNavigator, string nodeXPath, string childName)
+        {
+            var childNodeNavigator = parentNavigator.SelectSingleNode(nodeXPath);
+            if (childNodeNavigator != null)
+            {
+                parentNavigator.MoveToChild(childName, string.Empty);
+                parentNavigator.DeleteSelf();
             }
         }
     }

@@ -161,6 +161,9 @@
   <data name="BatchSizeRequired" xml:space="preserve">
     <value>The /BatchSize argument requires the size of the batch.  Example:  /BatchSize:10</value>
   </data>
+  <data name="BlameCollectDumpNotSupportedForPlatform" xml:space="preserve">
+    <value>CollectDump option for Blame is not supported for this platform.</value>
+  </data>
   <data name="BuildBasePathArgumentHelp" xml:space="preserve">
     <value>--BuildBasePath|/BuildBasePath:&lt;BuildBasePath&gt;
       The directory containing the temporary outputs.</value>
@@ -223,8 +226,7 @@
   </data>
   <data name="EnableCodeCoverageArgumentProcessorHelp" xml:space="preserve">
     <value>/EnableCodeCoverage
-      Enables data diagnostic adapter 'CodeCoverage' in the test run. Default 
-      settings are used if not specified using settings file.</value>
+      Enables data collector 'CodeCoverage' for the test run.</value>
   </data>
   <data name="EnableDiagUsage" xml:space="preserve">
     <value>--Diag|/Diag:&lt;Path to log file&gt;
@@ -233,27 +235,24 @@
   </data>
   <data name="EnableLoggersArgumentHelp" xml:space="preserve">
     <value>--logger|/logger:&lt;Logger Uri/FriendlyName&gt;
-      Specify a logger for test results.  For example, to log results into a 
-      Visual Studio Test Results File (TRX) use  /logger:trx [;LogFileName=&lt;Defaults to unique file name&gt;]
+      Specify a logger for test results. For example, to log results into a 
+      Visual Studio Test Results File (TRX) use /logger:trx[;LogFileName=&lt;Defaults to unique file name&gt;]
       Creates file in TestResults directory with given LogFileName.
 
-      To publish test results to Team Foundation Server, use TfsPublisher as shown below
-      Example: /logger:TfsPublisher;
-                Collection=&lt;team project collection url&gt;;
-                BuildName=&lt;build name&gt;;
-                TeamProject=&lt;team project name&gt;
-                [;Platform=&lt;Defaults to "Any CPU"&gt;]
-                [;Flavor=&lt;Defaults to "Debug"&gt;]
-                [;RunTitle=&lt;title&gt;]</value>
+      Change the verbosity level in log messages for console logger as shown below
+      Example: /logger:console;verbosity=&lt;Defaults to "normal"&gt;
+      Allowed values for verbosity: quiet, minimal, normal and detailed.
+
+      Change the diagnostic level prefix for console logger as shown below
+      Example: /logger:console;prefix=&lt;Defaults to "false"&gt;
+      More info on Console Logger here : https://aka.ms/console-logger</value>
   </data>
   <data name="ErrorMessageBanner" xml:space="preserve">
     <value>Error Message:</value>
   </data>
   <data name="Examples" xml:space="preserve">
-    <value>  To run tests in the same process:
+    <value>  To run tests:
     &gt;vstest.console.exe tests.dll 
-  To run tests in a separate process:
-    &gt;vstest.console.exe /inIsolation tests.dll
   To run tests with additional settings such as  data collectors:
     &gt;vstest.console.exe  tests.dll /Settings:Local.RunSettings</value>
   </data>
@@ -276,11 +275,11 @@
   <data name="FrameworkArgumentHelp" xml:space="preserve">
     <value>--Framework|/Framework:&lt;Framework Version&gt;
       Target .Net Framework version to be used for test execution. 
-      Valid values are ".NETFramework,Version=v4.6", ".NETCoreApp,Version=v1.0" etc.
-      Other supported values are Framework35, Framework40, Framework45 and FrameworkCore10.</value>
+      Valid values are ".NETFramework,Version=v4.5.1", ".NETCoreApp,Version=v1.0" etc.
+      Other supported values are Framework35, Framework40, Framework45, FrameworkCore10 and FrameworkUap10.</value>
   </data>
   <data name="FrameworkVersionRequired" xml:space="preserve">
-    <value>The /Framework argument requires the target .Net Framework version for the test run.   Example:  /Framework:".NETFramework,Version=v4.6"</value>
+    <value>The /Framework argument requires the target .Net Framework version for the test run.   Example:  /Framework:".NETFramework,Version=v4.5.1"</value>
   </data>
   <data name="HelpArgumentHelp" xml:space="preserve">
     <value>-?|--Help|/?|/Help
@@ -297,13 +296,13 @@
     <comment>Section Header for subsequent command help listing</comment>
   </data>
   <data name="HelpUsageText" xml:space="preserve">
-    <value>Usage: vstest.console.exe [Arguments] [Options] [[--] &lt;args&gt;...]]</value>
+    <value>Usage: vstest.console.exe [Arguments] [Options] [[--] &lt;RunSettings arguments&gt;...]]</value>
   </data>
   <data name="Hours" xml:space="preserve">
     <value>Hours</value>
   </data>
   <data name="InIsolationHelp" xml:space="preserve">
-    <value>/InIsolation
+    <value>--InIsolation|/InIsolation
       Runs the tests in an isolated process. This makes vstest.console.exe 
       process less likely to be stopped on an error in the tests, but tests 
       may run slower.</value>
@@ -318,7 +317,7 @@
     <value>Argument {0} is not expected in the 'EnableCodeCoverage' command. Specify the command without the argument (Example: vstest.console.exe myTests.dll /EnableCodeCoverage) and try again.</value>
   </data>
   <data name="InvalidFrameworkVersion" xml:space="preserve">
-    <value>Invalid .Net Framework version:{0}. Please give the fullname of the TargetFramework. Other supported .Net Framework versions are Framework35, Framework40 and Framework45.</value>
+    <value>Invalid .Net Framework version:{0}. Please give the fullname of the TargetFramework. Other supported .Net Framework versions are Framework35, Framework40, Framework45, FrameworkCore10 and FrameworkUap10.</value>
   </data>
   <data name="InvalidInIsolationCommand" xml:space="preserve">
     <value>Argument {0} is not expected in the 'InIsolation' command. Specify the command without the argument (Example: vstest.console.exe myTests.dll /InIsolation) and try again.</value>
@@ -365,7 +364,7 @@
   </data>
   <data name="ListTestsHelp" xml:space="preserve">
     <value>-lt|--ListTests|/lt|/ListTests:&lt;File Name&gt;
-      Lists discovered tests from the given test container.</value>
+      Lists all discovered tests from the given test container.</value>
   </data>
   <data name="LoggerFileIsReadOnly" xml:space="preserve">
     <value>The file {0} provided is read only</value>
@@ -381,9 +380,6 @@
   </data>
   <data name="LoggerUriInvalid" xml:space="preserve">
     <value>The Test Logger URI '{0}' is not valid.  The Test Logger will be ignored.</value>
-  </data>
-  <data name="MalformedRunSettingsFile" xml:space="preserve">
-    <value>Settings file provided do not confirm to required format. </value>
   </data>
   <data name="MicrosoftCommandLineTitle" xml:space="preserve">
     <value>Microsoft (R) Test Execution Command Line Tool Version {0}</value>
@@ -415,7 +411,7 @@
   <data name="NoTestsAvailableInSources" xml:space="preserve">
     <value>No test is available in {0}. Make sure that installed test discoverers &amp; executors, platform &amp; framework version settings are appropriate and try again.</value>
   </data>
-  <data name="NoTestsFoundWarningMessageWithSuggestionToUseVsix" xml:space="preserve">
+  <data name="StringFormatToJoinTwoStrings" xml:space="preserve">
     <value>{0} {1}</value>
   </data>
   <data name="OutputArgumentHelp" xml:space="preserve">
@@ -522,20 +518,8 @@
   <data name="StdOutMessagesBanner" xml:space="preserve">
     <value>Standard Output Messages:</value>
   </data>
-  <data name="SuggestUseVsixExtensionsIfNoTestsIsFound" xml:space="preserve">
-    <value>Additionally, you can try specifying '/UseVsixExtensions' command if the test discoverer &amp; executor is installed on the machine as vsix extensions and your installation supports vsix extensions. Example: vstest.console.exe myTests.dll /UseVsixExtensions:true</value>
-  </data>
-  <data name="SuggestUseVsixExtensionsInListDiscoverersCommand" xml:space="preserve">
-    <value>The Test Discovery Add-Ins installed through a VSIX installation are ignored. Use the /UseVsixExtensions parameter to include them, if your installation supports vsix extensions. Example: vstest.console.exe {0} /UseVsixExtensions:true</value>
-  </data>
-  <data name="SuggestUseVsixExtensionsInListExecutorsCommand" xml:space="preserve">
-    <value>The Test Executor Add-Ins installed through a VSIX installation are ignored. Use the /UseVsixExtensions parameter to include them, if your installation supports vsix extensions. Example: vstest.console.exe {0} /UseVsixExtensions:true</value>
-  </data>
-  <data name="SuggestUseVsixExtensionsInListLoggersCommand" xml:space="preserve">
-    <value>The Test Logger Add-Ins installed through a VSIX installation are ignored. Use the /UseVsixExtensions parameter to include them, if your installation supports vsix extensions. Example: vstest.console.exe {0} /UseVsixExtensions:true</value>
-  </data>
-  <data name="SuggestUseVsixExtensionsInListSettingsProviderCommand" xml:space="preserve">
-    <value>The Settings Providers Add-Ins installed through a VSIX installation are ignored. Use the /UseVsixExtensions parameter to include them, if your installation supports vsix extensions. Example: vstest.console.exe {0} /UseVsixExtensions:true</value>
+  <data name="SuggestTestAdapterPathIfNoTestsIsFound" xml:space="preserve">
+    <value>Additionally, path to test adapters can be specified using /TestAdapterPath command. Example  /TestAdapterPath:&lt;pathToCustomAdapters&gt;.</value>
   </data>
   <data name="SupportedFileTypesIndicator" xml:space="preserve">
     <value>        Supported File Types:</value>
@@ -617,8 +601,10 @@
     <value>The /UseVsixExtensions parameter requires a value. If 'true', the installed VSIX extensions (if any) will be used in the test run. If false, they will be ignored.   Example:  /UseVsixExtensions:true</value>
   </data>
   <data name="CLIRunSettingsArgumentHelp" xml:space="preserve">
-    <value>Args:
-      Any extra arguments that should be passed to adapter. Arguments may be specified as name-value pair of the form &lt;n&gt;=&lt;v&gt;, where &lt;n&gt; is the argument name, and &lt;v&gt; is the argument value. Use a space to separate multiple arguments.</value>
+    <value>RunSettings arguments:
+      Arguments to pass runsettings configurations through commandline. Arguments may be specified as name-value pair of the form [name]=[value] after "-- ". Note the space after --. 
+      Use a space to separate multiple [name]=[value].
+      More info on RunSettings arguments support: https://aka.ms/vstest-runsettings-arguments</value>
   </data>
   <data name="MalformedRunSettingsKey" xml:space="preserve">
     <value>One or more runsettings provided contain invalid token</value>
@@ -633,5 +619,71 @@
   </data>
   <data name="InvalidResultsDirectoryPathCommand" xml:space="preserve">
     <value>The path '{0}' specified in the 'ResultsDirectory' is invalid. Error: {1}</value>
+  </data>
+  <data name="InIsolationDeprecated" xml:space="preserve">
+    <value>The /InIsolation flag is deprecated. The tests are always run in a separate process</value>
+  </data>
+  <data name="NotRunTestIndicator" xml:space="preserve">
+    <value>Not Run  {0}</value>
+  </data>
+  <data name="VstestDiagLogOutputPath" xml:space="preserve">
+    <value>Logging Vstest Diagnostics in file: {0}</value>
+  </data>
+  <data name="CollectArgumentHelp" xml:space="preserve">
+    <value>--Collect|/Collect:&lt;DataCollector FriendlyName&gt;
+      Enables data collector for the test run. More info here : https://aka.ms/vstest-collect</value>
+  </data>
+  <data name="DataCollectorFriendlyNameInvalid" xml:space="preserve">
+    <value>The Data Collector friendly name '{0}' is not valid.  The Data Collector will be ignored.</value>
+  </data>
+  <data name="DbgTrcMessagesBanner" xml:space="preserve">
+    <value>Debug Traces Messages:</value>
+  </data>
+  <data name="OpenResponseFileError" xml:space="preserve">
+    <value>Error opening response file '{0}'</value>
+  </data>
+  <data name="ResponseFileArgumentHelp" xml:space="preserve">
+    <value>@&lt;file&gt;
+      Read response file for more options.</value>
+  </data>
+  <data name="EnableBlameUsage" xml:space="preserve">
+    <value>--Blame|/Blame
+      Runs the test in blame mode. This option is helpful in isolating the problematic test causing test host crash. It creates an output file in the current directory as "Sequence.xml", that captures the order of execution of test before the crash.</value>
+  </data>
+  <data name="TestRunAborted" xml:space="preserve">
+    <value>Test Run Aborted.</value>
+  </data>
+  <data name="TestRunCanceled" xml:space="preserve">
+    <value>Test Run Canceled.</value>
+  </data>
+  <data name="TestRunSummaryForCanceledOrAbortedRun" xml:space="preserve">
+    <value>Total tests: Unknown. Passed: {0}. Failed: {1}. Skipped: {2}.</value>
+  </data>
+  <data name="UseVsixExtensionsDeprecation" xml:space="preserve">
+    <value>/UseVsixExtensions is getting deprecated. Please use /TestAdapterPath instead.</value>
+  </data>
+  <data name="DisableAutoFakesUsage" xml:space="preserve">
+    <value>--DisableAutoFakes|/DisableAutoFakes:&lt;true/false&gt;
+     Example: /DisableAutoFakes:true</value>
+  </data>
+  <data name="CollectWithTestSettingErrorMessage" xml:space="preserve">
+    <value>--Collect|/Collect:"{0}" is not supported if test run is configured using testsettings.</value>
+  </data>
+  <data name="RunsettingsWithDCErrorMessage" xml:space="preserve">
+    <value>Data collectors other than Code Coverage and Microsoft Fakes configured via run settings are not supported with embedded test settings. Please see https://aka.ms/vstest-configure-datacollector for more information. Run settings: {0}.</value>
+  </data>
+  <data name="EnableLoggerArgumentsInNetCore" xml:space="preserve">
+    <value>--logger|/logger:&lt;Logger Uri/FriendlyName&gt;
+      Specify a logger for test results. For example, to log results into a 
+      Visual Studio Test Results File (TRX) use /logger:trx[;LogFileName=&lt;Defaults to unique file name&gt;]
+      Creates file in TestResults directory with given LogFileName.
+
+      Change the verbosity level in log messages for console logger as shown below
+      Example: /logger:console;verbosity=&lt;Defaults to "minimal"&gt;
+      Allowed values for verbosity: quiet, minimal, normal and detailed.
+
+      Change the diagnostic level prefix for console logger as shown below
+      Example: /logger:console;prefix=&lt;Defaults to "false"&gt;
+      More info on Console Logger here : https://aka.ms/console-logger</value>
   </data>
 </root>

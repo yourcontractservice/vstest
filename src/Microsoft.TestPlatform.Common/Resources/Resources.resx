@@ -118,10 +118,22 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="DataCollectionMessageFormat" xml:space="preserve">
-    <value>Diagnostic data adapter message: {0}</value>
+    <value>Data collection : {0}</value>
+  </data>
+  <data name="DataCollectorErrorOnGetVariable" xml:space="preserve">
+    <value>Data collector '{0}' failed to provide initialization information. Error: {1}</value>
+  </data>
+  <data name="DataCollectorInitializationError" xml:space="preserve">
+    <value>Data collector '{0}' threw an exception during type loading, construction, or initialization: {1}.</value>
   </data>
   <data name="DataCollectorMessageFormat" xml:space="preserve">
-    <value>Diagnostic data adapter ('{0}') message: {1}.</value>
+    <value>Data collector '{0}' message: {1}.</value>
+  </data>
+  <data name="DataCollectorNotFound" xml:space="preserve">
+    <value>Could not find data collector '{0}'</value>
+  </data>
+  <data name="DataCollectorRequestedDuplicateEnvironmentVariable" xml:space="preserve">
+    <value>The data collector '{0}' requested environment variable '{1}' with value '{2}' to be set in test execution environment, but another data collector '{3}' has already requested same environment variable with different value '{4}'.</value>
   </data>
   <data name="DuplicateExtensionUri" xml:space="preserve">
     <value>Duplicate test extension URI '{0}'.  Ignoring the duplicate extension.</value>
@@ -130,10 +142,19 @@
     <value>Duplicate settings provider named '{0}'.  Ignoring the duplicate provider.</value>
   </data>
   <data name="DuplicateSettingsProvided" xml:space="preserve">
-    <value>Duplicated run settings section named '{0}' found.  Ignoring the duplicate settings.</value>
+    <value>Duplicate run settings section named '{0}' found.  Ignoring the duplicate settings.</value>
   </data>
   <data name="EmptyParenthesis" xml:space="preserve">
     <value>Error: Empty parenthesis ( )</value>
+  </data>
+  <data name="FailedToFindInstalledUnitTestExtensions" xml:space="preserve">
+    <value>Failed to find the list of installed unit test extensions. Reason: {0}</value>
+  </data>
+  <data name="FastFilterException" xml:space="preserve">
+    <value>An error occured while creating Fast filter.</value>
+  </data>
+  <data name="IgnoredDuplicateConfiguration" xml:space="preserve">
+    <value>There are multiple configurations that have data collector FriendlyName as '{0}'. Duplicate configurations will be ignored in the test run.</value>
   </data>
   <data name="InvalidCondition" xml:space="preserve">
     <value>Error: Invalid Condition '{0}'</value>
@@ -145,10 +166,13 @@
     <value>Error: Invalid operator '{0}'</value>
   </data>
   <data name="LoggerInitializationError" xml:space="preserve">
-    <value>Exception occurred while initializing logger with URI '{0}'.  The logger will not be used.  Exception: {1}</value>
+    <value>Exception occurred while initializing logger with {0}: '{1}'.  The logger will not be used.  Exception: {2}</value>
   </data>
   <data name="LoggerNotFound" xml:space="preserve">
-    <value>Could not find a test logger with URI or FriendlyName '{0}'.</value>
+    <value>Could not find a test logger with AssemblyQualifiedName, URI or FriendlyName '{0}'.</value>
+  </data>
+  <data name="LoggerUriInvalid" xml:space="preserve">
+    <value>The Test Logger URI '{0}' is not valid.  The Test Logger will be ignored.</value>
   </data>
   <data name="MissingCloseParenthesis" xml:space="preserve">
     <value>Error: Missing ')'</value>
@@ -161,6 +185,9 @@
   </data>
   <data name="MissingOperator" xml:space="preserve">
     <value>Missing Operator '|' or '&amp;'</value>
+  </data>
+  <data name="ReportDataCollectorException" xml:space="preserve">
+    <value>Data collector caught an exception of type '{0}': '{1}'. More details: {2}.</value>
   </data>
   <data name="RunSettingsAlreadyLoaded" xml:space="preserve">
     <value>The Run Settings have already been loaded.</value>
@@ -179,5 +206,11 @@
   </data>
   <data name="TestCaseFilterFormatException" xml:space="preserve">
     <value>Incorrect format for TestCaseFilter {0}. Specify the correct format and try again. Note that the incorrect format can lead to no test getting executed.</value>
+  </data>
+  <data name="VSInstallationNotFound" xml:space="preserve">
+    <value>This option works only with vstest.console.exe installed as part of Visual Studio.</value>
+  </data>
+  <data name="WrongDataCollectionContextType" xml:space="preserve">
+    <value>Types deriving from the data collection context cannot be used for sending data and messages.  The DataCollectionContext used for sending data and messages must come from one of the events raised to the data collector.</value>
   </data>
 </root>

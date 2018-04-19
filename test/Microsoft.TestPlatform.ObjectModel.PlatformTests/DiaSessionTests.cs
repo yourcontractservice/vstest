@@ -7,21 +7,20 @@ namespace Microsoft.TestPlatform.ObjectModel.PlatformTests
     using System.Diagnostics;
 
     using Microsoft.TestPlatform.TestUtilities;
-    using Microsoft.TestPlatform.TestUtilities.PerfInstrumentation;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     [TestClass]
     public class DiaSessionTests : IntegrationTestBase
     {
-        private const string NET46 = "net46";
+        private const string NET451 = "net451";
         private const string NETCOREAPP10 = "netcoreapp1.0";
 
         public static string GetAndSetTargetFrameWork(IntegrationTestEnvironment testEnvironment)
         {
             var currentTargetFrameWork = testEnvironment.TargetFramework;
-#if NET46
-            testEnvironment.TargetFramework = NET46;
+#if NET451
+            testEnvironment.TargetFramework = NET451;
 #else
             testEnvironment.TargetFramework = NETCOREAPP10;
 #endif
@@ -32,16 +31,16 @@ namespace Microsoft.TestPlatform.ObjectModel.PlatformTests
         public void GetNavigationDataShouldReturnCorrectFileNameAndLineNumber()
         {
             var currentTargetFrameWork = GetAndSetTargetFrameWork(this.testEnvironment);
-            var assemblyPath = this.GetSampleTestAssembly();
+            var assemblyPath = GetAssetFullPath("SimpleClassLibrary.dll");
 
             DiaSession diaSession = new DiaSession(assemblyPath);
-            DiaNavigationData diaNavigationData = diaSession.GetNavigationData("SampleUnitTestProject.UnitTest1", "PassingTest");
+            DiaNavigationData diaNavigationData = diaSession.GetNavigationData("SimpleClassLibrary.Class1", "PassingTest");
 
             Assert.IsNotNull(diaNavigationData, "Failed to get navigation data");
-            StringAssert.EndsWith(diaNavigationData.FileName, @"\SimpleTestProject\UnitTest1.cs");
+            StringAssert.EndsWith(diaNavigationData.FileName, @"\SimpleClassLibrary\Class1.cs");
 
-            Assert.AreEqual(23, diaNavigationData.MinLineNumber, "Incorrect min line number");
-            Assert.AreEqual(25, diaNavigationData.MaxLineNumber, "Incorrect max line number");
+            this.ValidateMinLineNumber(12, diaNavigationData.MinLineNumber);
+            Assert.AreEqual(14, diaNavigationData.MaxLineNumber, "Incorrect max line number");
 
             this.testEnvironment.TargetFramework = currentTargetFrameWork;
         }
@@ -50,16 +49,16 @@ namespace Microsoft.TestPlatform.ObjectModel.PlatformTests
         public void GetNavigationDataShouldReturnCorrectDataForAsyncMethod()
         {
             var currentTargetFrameWork = GetAndSetTargetFrameWork(this.testEnvironment);
-            var assemblyPath = this.GetAssetFullPath("SimpleTestProject3.dll");
+            var assemblyPath = this.GetAssetFullPath("SimpleClassLibrary.dll");
 
             DiaSession diaSession = new DiaSession(assemblyPath);
-            DiaNavigationData diaNavigationData = diaSession.GetNavigationData("SampleUnitTestProject3.UnitTest1+<AsyncTestMethod>d__1", "MoveNext");
+            DiaNavigationData diaNavigationData = diaSession.GetNavigationData("SimpleClassLibrary.Class1+<AsyncTestMethod>d__1", "MoveNext");
 
             Assert.IsNotNull(diaNavigationData, "Failed to get navigation data");
-            StringAssert.EndsWith(diaNavigationData.FileName, @"\SimpleTestProject3\UnitTest1.cs");
+            StringAssert.EndsWith(diaNavigationData.FileName, @"\SimpleClassLibrary\Class1.cs");
 
-            Assert.AreEqual(20, diaNavigationData.MinLineNumber, "Incorrect min line number");
-            Assert.AreEqual(22, diaNavigationData.MaxLineNumber, "Incorrect max line number");
+            this.ValidateMinLineNumber(17, diaNavigationData.MinLineNumber);
+            Assert.AreEqual(19, diaNavigationData.MaxLineNumber, "Incorrect max line number");
 
             this.testEnvironment.TargetFramework = currentTargetFrameWork;
         }
@@ -68,16 +67,17 @@ namespace Microsoft.TestPlatform.ObjectModel.PlatformTests
         public void GetNavigationDataShouldReturnCorrectDataForOverLoadedMethod()
         {
             var currentTargetFrameWork = GetAndSetTargetFrameWork(this.testEnvironment);
-            var assemblyPath = this.GetAssetFullPath("SimpleTestProject3.dll");
+            var assemblyPath = this.GetAssetFullPath("SimpleClassLibrary.dll");
 
             DiaSession diaSession = new DiaSession(assemblyPath);
-            DiaNavigationData diaNavigationData = diaSession.GetNavigationData("SampleUnitTestProject3.Class1", "OverLoadededMethod");
+            DiaNavigationData diaNavigationData = diaSession.GetNavigationData("SimpleClassLibrary.Class1", "OverLoadedMethod");
 
             Assert.IsNotNull(diaNavigationData, "Failed to get navigation data");
-            StringAssert.EndsWith(diaNavigationData.FileName, @"\SimpleTestProject3\UnitTest1.cs");
+            StringAssert.EndsWith(diaNavigationData.FileName, @"\SimpleClassLibrary\Class1.cs");
 
-            Assert.AreEqual(32, diaNavigationData.MinLineNumber, "Incorrect min line number");
-            Assert.AreEqual(33, diaNavigationData.MaxLineNumber, "Incorrect max line number");
+            // Weird why DiaSession is now returning the first overloaded method
+            // as compared to before when it used to  retun second method
+            this.ValidateLineNumbers(diaNavigationData.MinLineNumber, diaNavigationData.MaxLineNumber);
 
             this.testEnvironment.TargetFramework = currentTargetFrameWork;
         }
@@ -86,16 +86,16 @@ namespace Microsoft.TestPlatform.ObjectModel.PlatformTests
         public void GetNavigationDataShouldReturnNullForNotExistMethodNameOrNotExistTypeName()
         {
             var currentTargetFrameWork = GetAndSetTargetFrameWork(this.testEnvironment);
-            var assemblyPath = this.GetSampleTestAssembly();
+            var assemblyPath = GetAssetFullPath("SimpleClassLibrary.dll");
 
             DiaSession diaSession = new DiaSession(assemblyPath);
 
             // Not exist method name
-            DiaNavigationData diaNavigationData = diaSession.GetNavigationData("SampleUnitTestProject.UnitTest1", "NotExistMethod");
+            DiaNavigationData diaNavigationData = diaSession.GetNavigationData("SimpleClassLibrary.Class1", "NotExistMethod");
             Assert.IsNull(diaNavigationData);
 
             // Not Exist Type name
-            diaNavigationData = diaSession.GetNavigationData("SampleUnitTestProject.NotExistType", "PassingTest");
+            diaNavigationData = diaSession.GetNavigationData("SimpleClassLibrary.NotExistType", "PassingTest");
             Assert.IsNull(diaNavigationData);
 
             this.testEnvironment.TargetFramework = currentTargetFrameWork;
@@ -105,21 +105,59 @@ namespace Microsoft.TestPlatform.ObjectModel.PlatformTests
         public void DiaSessionPerfTest()
         {
             var currentTargetFrameWork = GetAndSetTargetFrameWork(this.testEnvironment);
-            var assemblyPath = this.GetAssetFullPath("PerfTestProject.dll");
+            var assemblyPath = this.GetAssetFullPath("SimpleClassLibrary.dll");
 
             var watch = Stopwatch.StartNew();
             DiaSession diaSession = new DiaSession(assemblyPath);
-            DiaNavigationData diaNavigationData = diaSession.GetNavigationData("PerfTestProject.UnitTest1", "MSTest_D1_01");
+            DiaNavigationData diaNavigationData = diaSession.GetNavigationData("SimpleClassLibrary.HugeMethodSet", "MSTest_D1_01");
             watch.Stop();
 
             Assert.IsNotNull(diaNavigationData, "Failed to get navigation data");
-            StringAssert.EndsWith(diaNavigationData.FileName, @"\PerfTestProject\UnitTest1.cs");
-            Assert.AreEqual(diaNavigationData.MinLineNumber, 17);
-            Assert.AreEqual(diaNavigationData.MaxLineNumber, 20);
+            StringAssert.EndsWith(diaNavigationData.FileName, @"\SimpleClassLibrary\HugeMethodSet.cs");
+            this.ValidateMinLineNumber(9, diaNavigationData.MinLineNumber);
+            Assert.AreEqual(10, diaNavigationData.MaxLineNumber);
             var expectedTime = 150;
             Assert.IsTrue(watch.Elapsed.Milliseconds < expectedTime, string.Format("DiaSession Perf test Actual time:{0} ms Expected time:{1} ms", watch.Elapsed.Milliseconds, expectedTime));
 
             this.testEnvironment.TargetFramework = currentTargetFrameWork;
+        }
+
+        private void ValidateLineNumbers(int min, int max)
+        {
+            // Release builds optimize code, hence min line numbers are different.
+            if (IntegrationTestEnvironment.BuildConfiguration.StartsWith("release", StringComparison.OrdinalIgnoreCase))
+            {
+                Assert.AreEqual(min, max, "Incorrect min line number");
+            }
+            else
+            {
+                if (max == 23)
+                {
+                    Assert.AreEqual(min + 1, max, "Incorrect min line number");
+                }
+
+                else if (max == 27)
+                {
+                    Assert.AreEqual(min + 1, max, "Incorrect min line number");
+                }
+                else
+                {
+                    Assert.Fail("Incorrect min/max line number");
+                }
+            }
+        }
+
+        private void ValidateMinLineNumber(int expected, int actual)
+        {
+            // Release builds optimize code, hence min line numbers are different.
+            if (IntegrationTestEnvironment.BuildConfiguration.StartsWith("release", StringComparison.OrdinalIgnoreCase))
+            {
+                Assert.AreEqual(expected + 1, actual, "Incorrect min line number");
+            }
+            else
+            {
+                Assert.AreEqual(expected, actual, "Incorrect min line number");
+            }
         }
     }
 }

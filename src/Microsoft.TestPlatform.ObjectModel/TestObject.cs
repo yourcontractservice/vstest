@@ -1,4 +1,4 @@
-﻿﻿// Copyright (c) Microsoft Corporation. All rights reserved.
+﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
@@ -18,16 +18,10 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
     [DataContract]
     public abstract class TestObject
     {
-        static TestObject()
-        {
-            // Do TypeConverter registrations in static constructor only to avoid multiple registrations
-            // If we register too much, deserialization of large number of testobjects will cause StackOverflow exception
-            TypeDescriptor.AddAttributes(typeof(Guid), new TypeConverterAttribute(typeof(CustomGuidConverter)));
-            TypeDescriptor.AddAttributes(typeof(KeyValuePair<string, string>[]), new TypeConverterAttribute(typeof(CustomKeyValueConverter)));
-            TypeDescriptor.AddAttributes(typeof(string[]), new TypeConverterAttribute(typeof(CustomStringArrayConverter)));
-        }
-
         #region Fields
+
+        private static CustomKeyValueConverter keyValueConverter = new CustomKeyValueConverter();
+        private static CustomStringArrayConverter stringArrayConverter = new CustomStringArrayConverter();
 
         /// <summary>
         /// The store for all the properties registered.
@@ -62,9 +56,17 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
                         null,
                         property.Key.Attributes,
                         typeof(TestObject));
+
+                    // Do not call SetPropertyValue(TestProperty property, object value) as it does not
+                    // invoke ConvertPropertyFrom and does not store the properties in correct types.
                     this.SetPropertyValue(property.Key, property.Value, CultureInfo.InvariantCulture);
                 }
             }
+        }
+
+        public IEnumerable<KeyValuePair<TestProperty, object>> GetProperties()
+        {
+            return this.store;
         }
 
         #endregion Fields
@@ -73,7 +75,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
 
         protected TestObject()
         {
-            this.store = new Dictionary<TestProperty, object>();            
+            this.store = new Dictionary<TestProperty, object>();
         }
 
         [OnSerializing]
@@ -105,7 +107,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
         /// <summary>
         /// Returns the TestProperties currently specified in this TestObject.
         /// </summary>
-        public IEnumerable<TestProperty> Properties
+        public virtual IEnumerable<TestProperty> Properties
         {
             get { return this.store.Keys; }
         }
@@ -127,7 +129,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
                 defaultValue = Activator.CreateInstance(valueType);
             }
 
-            return this.PrivateGetPropertyValue(property, defaultValue);
+            return this.ProtectedGetPropertyValue(property, defaultValue);
         }
 
         /// <summary>
@@ -171,7 +173,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
         /// <param name="value">value to be set</param>
         public void SetPropertyValue(TestProperty property, object value)
         {
-            this.PrivateSetPropertyValue(property, value);
+            this.ProtectedSetPropertyValue(property, value);
         }
 
         /// <summary>
@@ -188,8 +190,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
                 this.store.Remove(property);
             }
         }
-
-
+ 
         /// <summary>
         /// Returns TestProperty's value 
         /// </summary>
@@ -199,7 +200,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
             ValidateArg.NotNull(property, "property");
             ValidateArg.NotNull(culture, "culture");
 
-            object objValue = this.PrivateGetPropertyValue(property, defaultValue);
+            object objValue = this.ProtectedGetPropertyValue(property, defaultValue);
 
             return ConvertPropertyTo<T>(property, culture, objValue);
         }
@@ -214,7 +215,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
 
             object objValue = ConvertPropertyFrom<T>(property, culture, value);
 
-            this.PrivateSetPropertyValue(property, objValue);
+            this.ProtectedSetPropertyValue(property, objValue);
         }
 
         /// <summary>
@@ -227,7 +228,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
 
             object objValue = ConvertPropertyFrom<T>(property, culture, value);
 
-            this.PrivateSetPropertyValue(property, objValue);
+            this.ProtectedSetPropertyValue(property, objValue);
         }
 
         #endregion Property Values
@@ -238,7 +239,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
         /// Return TestProperty's value
         /// </summary>
         /// <returns></returns>
-        private object PrivateGetPropertyValue(TestProperty property, object defaultValue)
+        protected virtual object ProtectedGetPropertyValue(TestProperty property, object defaultValue)
         {
             ValidateArg.NotNull(property, "property");
 
@@ -254,7 +255,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
         /// <summary>
         /// Set TestProperty's value
         /// </summary>
-        private void PrivateSetPropertyValue(TestProperty property, object value)
+        protected virtual void ProtectedSetPropertyValue(TestProperty property, object value)
         {
             ValidateArg.NotNull(property, "property");
 
@@ -285,6 +286,18 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
             if (valueType != null && (valueType.GetTypeInfo().IsAssignableFrom(typeof(T).GetTypeInfo()) || valueType.GetTypeInfo().IsAssignableFrom(value?.GetType().GetTypeInfo())))
             {
                 return value;
+            }
+
+            // Traits are KeyValuePair based. Use the custom converter in that case.
+            if (valueType == typeof(KeyValuePair<string, string>[]))
+            {
+                return keyValueConverter.ConvertFrom(null, culture, (string)value);
+            }
+
+            // Use a custom string array converter for string[] types.
+            if (valueType == typeof(string[]))
+            {
+                return stringArrayConverter.ConvertFrom(null, culture, (string)value);
             }
 
             TypeConverter converter = TypeDescriptor.GetConverter(valueType);
@@ -372,5 +385,5 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
                 return this.traits;
             }
         }
-    } 
+    }
 }

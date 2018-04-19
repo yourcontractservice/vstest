@@ -5,16 +5,12 @@ namespace Microsoft.VisualStudio.TestPlatform.Common.ExtensionFramework
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics.CodeAnalysis;
+    using System.Linq;
     using System.Reflection;
-
-    using Interfaces;
 
     using Microsoft.VisualStudio.TestPlatform.Common.ExtensionFramework.Utilities;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel;
-    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
-    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
-    
+
     /// <summary>
     /// Manages test plugins information.
     /// </summary>
@@ -96,7 +92,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Common.ExtensionFramework
                     }
                     throw;
                 }
-#if NET46
+#if NET451
                 else if (ex is SystemException)
                 {
                     if (EqtTrace.IsErrorEnabled)
@@ -110,6 +106,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Common.ExtensionFramework
                 {
                     EqtTrace.Error("TestPluginManager.CreateTestExtension: Could not create instance of type: " + extensionType.ToString() + "  Exception: " + ex);
                 }
+
                 throw;
             }
         }
@@ -121,45 +118,68 @@ namespace Microsoft.VisualStudio.TestPlatform.Common.ExtensionFramework
         /// <summary>
         /// Retrieves the test extension collections of given extension type.
         /// </summary>
-        /// <typeparam name="IExtension">Type of the required extensions</typeparam>
-        /// <typeparam name="IMetadata">Type of metadata of required extensions</typeparam>
-        /// <typeparam name="TMetadata">Concrete type of metadata</typeparam>
-        /// <param name="unfiltered">Receives unfiltered list of test extensions</param>
-        /// <param name="filtered">Receives test extensions filtered by Identifier data</param>
-        public void GetTestExtensions<IExtension, IMetadata, TMetadata>(
+        /// <typeparam name="IExtension">
+        /// Type of the required extensions
+        /// </typeparam>
+        /// <typeparam name="IMetadata">
+        /// Type of metadata of required extensions
+        /// </typeparam>
+        /// <typeparam name="TMetadata">
+        /// Concrete type of metadata
+        /// </typeparam>
+        /// <param name="endsWithPattern">
+        /// Pattern used to select files using String.EndsWith
+        /// </param>
+        /// <param name="unfiltered">
+        /// Receives unfiltered list of test extensions
+        /// </param>
+        /// <param name="filtered">
+        /// Receives test extensions filtered by Identifier data
+        /// </param>
+        public void GetSpecificTestExtensions<TPluginInfo, IExtension, IMetadata, TMetadata>(
+            string endsWithPattern,
             out IEnumerable<LazyExtension<IExtension, Dictionary<string, object>>> unfiltered,
-            out IEnumerable<LazyExtension<IExtension, IMetadata>> filtered) where TMetadata : IMetadata
+            out IEnumerable<LazyExtension<IExtension, IMetadata>> filtered) where TMetadata : IMetadata where TPluginInfo : TestPluginInformation
         {
-            if (!TestPluginCache.Instance.AreDefaultExtensionsDiscovered)
-            {
-                TestPluginCache.Instance.DiscoverAllTestExtensions();
-            }
-
-            this.GetExtensions<IExtension, IMetadata, TMetadata>(TestPluginCache.Instance.TestExtensions, out unfiltered, out filtered);
+            var extensions = TestPluginCache.Instance.DiscoverTestExtensions<TPluginInfo, IExtension>(endsWithPattern);
+            this.GetExtensions<TPluginInfo, IExtension, IMetadata, TMetadata>(extensions, out unfiltered, out filtered);
         }
 
         /// <summary>
         /// Retrieves the test extension collections of given extension type for the provided extension assembly.
         /// </summary>
-        /// <param name="extensionAssembly"> The extension assembly. </param>
-        /// <typeparam name="IExtension">Type of the required extensions</typeparam>
-        /// <typeparam name="IMetadata">Type of metadata of required extensions</typeparam>
-        /// <typeparam name="TMetadata">Concrete type of metadata</typeparam>
-        /// <param name="unfiltered">Receives unfiltered list of test extensions</param>
-        /// <param name="filtered">Receives test extensions filtered by Identifier data</param>
-        public void GetTestExtensions<IExtension, IMetadata, TMetadata>(
+        /// <param name="extensionAssembly">
+        /// The extension assembly. 
+        /// </param>
+        /// <typeparam name="TPluginInfo">
+        /// </typeparam>
+        /// <typeparam name="IExtension">
+        /// Type of the required extensions
+        /// </typeparam>
+        /// <typeparam name="IMetadata">
+        /// Type of metadata of required extensions
+        /// </typeparam>
+        /// <typeparam name="TMetadata">
+        /// Concrete type of metadata
+        /// </typeparam>
+        /// <param name="unfiltered">
+        /// Receives unfiltered list of test extensions
+        /// </param>
+        /// <param name="filtered">
+        /// Receives test extensions filtered by Identifier data
+        /// </param>
+        public void GetTestExtensions<TPluginInfo, IExtension, IMetadata, TMetadata>(
             string extensionAssembly,
             out IEnumerable<LazyExtension<IExtension, Dictionary<string, object>>> unfiltered,
-            out IEnumerable<LazyExtension<IExtension, IMetadata>> filtered) where TMetadata : IMetadata
+            out IEnumerable<LazyExtension<IExtension, IMetadata>> filtered) where TMetadata : IMetadata where TPluginInfo : TestPluginInformation
         {
-            var extensions = TestPluginCache.Instance.GetTestExtensions(extensionAssembly);
-            this.GetExtensions<IExtension, IMetadata, TMetadata>(extensions, out unfiltered, out filtered);
+            var extensions = TestPluginCache.Instance.GetTestExtensions<TPluginInfo, IExtension>(extensionAssembly);
+            this.GetExtensions<TPluginInfo, IExtension, IMetadata, TMetadata>(extensions, out unfiltered, out filtered);
         }
 
         #endregion
 
         #region Private Methods
-        
 
         /// <summary>
         /// Prepares a List of TestPluginInformation&gt;
@@ -182,66 +202,48 @@ namespace Microsoft.VisualStudio.TestPlatform.Common.ExtensionFramework
         /// <summary>
         /// Gets unfiltered and filtered extensions from the provided test extension collection.
         /// </summary>
-        /// <typeparam name="IExtension">Type of the required extensions</typeparam>
-        /// <typeparam name="IMetadata">Type of metadata of required extensions</typeparam>
-        /// <typeparam name="TMetadata">Concrete type of metadata</typeparam>
-        /// <param name="testExtensions">The test extension collection list.</param>
-        /// <param name="unfiltered">Receives unfiltered list of test extensions</param>
-        /// <param name="filtered">Receives test extensions filtered by Identifier data</param>
-        private void GetExtensions<IExtension, IMetadata, TMetadata>(
-            TestExtensions testExtensions,
+        /// <typeparam name="TPluginInfo">
+        /// </typeparam>
+        /// <typeparam name="IExtension">
+        /// Type of the required extensions
+        /// </typeparam>
+        /// <typeparam name="IMetadata">
+        /// Type of metadata of required extensions
+        /// </typeparam>
+        /// <typeparam name="TMetadata">
+        /// Concrete type of metadata
+        /// </typeparam>
+        /// <param name="testPluginInfo">
+        /// The test extension dictionary.
+        /// </param>
+        /// <param name="unfiltered">
+        /// Receives unfiltered list of test extensions
+        /// </param>
+        /// <param name="filtered">
+        /// Receives test extensions filtered by Identifier data
+        /// </param>
+        private void GetExtensions<TPluginInfo, IExtension, IMetadata, TMetadata>(
+            Dictionary<string, TPluginInfo> testPluginInfo,
             out IEnumerable<LazyExtension<IExtension, Dictionary<string, object>>> unfiltered,
-            out IEnumerable<LazyExtension<IExtension, IMetadata>> filtered) where TMetadata : IMetadata
+            out IEnumerable<LazyExtension<IExtension, IMetadata>> filtered) where TMetadata : IMetadata where TPluginInfo : TestPluginInformation
         {
             var unfilteredExtensions = new List<LazyExtension<IExtension, Dictionary<string, object>>>();
             var filteredExtensions = new List<LazyExtension<IExtension, IMetadata>>();
 
-            var testPlugins = this.GetExtensionsCollection(testExtensions, typeof(IExtension));
+            var testPlugins = this.GetValuesFromDictionary(testPluginInfo);
             foreach (var plugin in testPlugins)
             {
-                var testExtension = new LazyExtension<IExtension, IMetadata>(plugin, typeof(TMetadata));
                 if (!string.IsNullOrEmpty(plugin.IdentifierData))
                 {
+                    var testExtension = new LazyExtension<IExtension, IMetadata>(plugin, typeof(TMetadata));
                     filteredExtensions.Add(testExtension);
                 }
 
-                unfilteredExtensions.Add(
-                    new LazyExtension<IExtension, Dictionary<string, object>>(plugin, new Dictionary<string, object>()));
+                unfilteredExtensions.Add(new LazyExtension<IExtension, Dictionary<string, object>>(plugin, new Dictionary<string, object>()));
             }
 
             unfiltered = unfilteredExtensions;
             filtered = filteredExtensions;
-        }
-
-        /// <summary>
-        /// Helper to fetch appropriate test plugin information collection depending upon the extension data type.
-        /// </summary>
-        /// <param name="extensions"> The extensions. </param>
-        /// <param name="extensionType"> Data type of the test extension </param>
-        /// <returns> Collection of test extensions of the given type </returns>
-        private IEnumerable<TestPluginInformation> GetExtensionsCollection(TestExtensions extensions, Type extensionType)
-        {
-            if (typeof(ITestDiscoverer).GetTypeInfo().IsAssignableFrom(extensionType))
-            {
-                return this.GetValuesFromDictionary<TestDiscovererPluginInformation>(extensions.TestDiscoverers);
-            }
-            else if (typeof(ITestExecutor).GetTypeInfo().IsAssignableFrom(extensionType))
-            {
-                return this.GetValuesFromDictionary<TestExecutorPluginInformation>(extensions.TestExecutors);
-            }
-            else if (typeof(ISettingsProvider).GetTypeInfo().IsAssignableFrom(extensionType))
-            {
-                return this.GetValuesFromDictionary<TestSettingsProviderPluginInformation>(extensions.TestSettingsProviders);
-            }
-            else if (typeof(ITestLogger).GetTypeInfo().IsAssignableFrom(extensionType))
-            {
-                return this.GetValuesFromDictionary<TestLoggerPluginInformation>(extensions.TestLoggers);
-            }
-            else
-            {
-                EqtTrace.Info("TestExtensionsManager.GetExtesnionsCollection: Failed to get test extensions colleciton for type {0}", extensionType);
-                return null;
-            }
         }
 
         #endregion

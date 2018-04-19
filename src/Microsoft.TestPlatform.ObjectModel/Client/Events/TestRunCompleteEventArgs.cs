@@ -4,6 +4,7 @@
 namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Client
 {
     using System;
+    using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.Runtime.Serialization;
 
@@ -30,10 +31,10 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Client
             this.IsCanceled = isCanceled;
             this.IsAborted = isAborted;
             this.Error = error;
-            this.AttachmentSets = attachmentSets;
+            this.AttachmentSets = attachmentSets ?? new Collection<AttachmentSet>(); // Ensuring attachmentSets are not null, so that new attachmentSets can be combined whenever required.
             this.ElapsedTimeInRunningTests = elapsedTime;
         }
-        
+
         /// <summary>
         /// Gets the statistics on the state of the test run.
         /// </summary>
@@ -70,5 +71,11 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Client
         /// </summary>
         [DataMember]
         public TimeSpan ElapsedTimeInRunningTests { get; private set; }
+
+        /// <summary>
+        /// Get or Sets the Metrics
+        /// </summary>
+        [DataMember]
+        public IDictionary<string, object> Metrics { get; set; }
     }    
 }
