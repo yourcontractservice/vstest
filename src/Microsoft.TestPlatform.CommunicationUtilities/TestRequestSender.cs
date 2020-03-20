@@ -452,6 +452,19 @@ namespace Microsoft.VisualStudio.TestPlatform.CommunicationUtilities
 
                         this.channel.Send(data);
                         break;
+
+                    case MessageType.AttachDebuggerToProcess:
+                        var testProcessPid = this.dataSerializer.DeserializePayload<TestProcessAttachDebuggerPayload>(message);
+                        bool result = ((ITestRunEventsHandler2)testRunEventsHandler).AttachDebuggerToProcess(testProcessPid.ProcessID);
+
+                        var resultMessage = this.dataSerializer.SerializePayload(
+                            MessageType.AttachDebuggerToProcessCallback,
+                            result,
+                            this.protocolVersion);
+
+                        this.channel.Send(resultMessage);
+
+                        break;
                 }
             }
             catch (Exception exception)

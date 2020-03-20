@@ -34,13 +34,15 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
 
         private readonly IDataSerializer dataSerializer;
 
-        private object ackLockObject = new object();
+        private object lockObject = new object();
 
         private ProtocolConfig protocolConfig = Constants.DefaultProtocolConfig;
 
         private IEnvironment platformEnvironment;
 
-        protected Action<Message> onAckMessageReceived;
+        protected Action<Message> onCustomTestHostLaunchAckReceived;
+
+        protected Action<Message> onAttachDebuggerAckRecieved;
 
         private TestSessionMessageLogger testSessionMessageLogger;
 
@@ -221,7 +223,13 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
 
                         case MessageType.CustomTestHostLaunchCallback:
                             {
-                                this.onAckMessageReceived?.Invoke(message);
+                                this.onCustomTestHostLaunchAckReceived?.Invoke(message);
+                                break;
+                            }
+
+                        case MessageType.ProxyAttachDebuggerToProcessCallback:
+                            {
+                                this.onAttachDebuggerAckRecieved?.Invoke(message);
                                 break;
                             }
 
@@ -264,11 +272,11 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
         /// </returns>
         public int LaunchCustomHost(TestProcessStartInfo testProcessStartInfo, CancellationToken cancellationToken)
         {
-            lock (ackLockObject)
+            lock (this.lockObject)
             {
                 var waitHandle = new AutoResetEvent(false);
                 Message ackMessage = null;
-                this.onAckMessageReceived = (ackRawMessage) =>
+                this.onCustomTestHostLaunchAckReceived = (ackRawMessage) =>
                 {
                     ackMessage = ackRawMessage;
                     waitHandle.Set();
@@ -285,7 +293,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
 
                 cancellationToken.ThrowTestPlatformExceptionIfCancellationRequested();
 
-                this.onAckMessageReceived = null;
+                this.onCustomTestHostLaunchAckReceived = null;
 
                 var ackPayload = this.dataSerializer.DeserializePayload<CustomHostLaunchAckPayload>(ackMessage);
 
@@ -297,6 +305,36 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
                 {
                     throw new TestPlatformException(ackPayload.ErrorMessage);
                 }
+            }
+        }
+
+        /// <inheritdoc/>
+        public bool AttachDebuggerToProcess(int pid, CancellationToken cancellationToken)
+        {
+            lock (this.lockObject)
+            {
+                var waitHandle = new AutoResetEvent(false);
+                Message ackMessage = null;
+                this.onAttachDebuggerAckRecieved = (ackRawMessage) =>
+                {
+                    ackMessage = ackRawMessage;
+                    waitHandle.Set();
+                };
+
+                this.communicationManager.SendMessage(MessageType.ProxyAttachDebuggerToProcess, pid);
+
+                WaitHandle.WaitAny(new WaitHandle[] { waitHandle, cancellationToken.WaitHandle });
+
+                cancellationToken.ThrowTestPlatformExceptionIfCancellationRequested();
+                this.onAttachDebuggerAckRecieved = null;
+
+                var ackPayload = this.dataSerializer.DeserializePayload<ProxyAttachDebuggerToProcessAckPayload>(ackMessage);
+                if (!ackPayload.Attached)
+                {
+                    EqtTrace.Warning(ackPayload.ErrorMessage);
+                }
+
+                return ackPayload.Attached;
             }
         }
 
@@ -439,7 +477,6 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
             // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
             Dispose(true);
         }
-
         #endregion
     }
 }
