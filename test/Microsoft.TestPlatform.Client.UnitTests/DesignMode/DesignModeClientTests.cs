@@ -480,7 +480,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.UnitTests.DesignMode
                     HostProcessId = processId,
                     ErrorMessage = errorMessage
                 };
-                this.onAckMessageReceived?.Invoke(
+                this.onCustomTestHostLaunchAckReceived?.Invoke(
                     new Message() { MessageType = MessageType.CustomTestHostLaunchCallback, Payload = JToken.FromObject(payload) });
             }
         }
