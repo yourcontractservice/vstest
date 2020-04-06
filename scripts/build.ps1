@@ -48,6 +48,8 @@ Param(
     [System.String[]] $ProjectNamePatterns = @()
 )
 
+dotnet --info
+
 $ErrorActionPreference = "Stop"
 
 #
