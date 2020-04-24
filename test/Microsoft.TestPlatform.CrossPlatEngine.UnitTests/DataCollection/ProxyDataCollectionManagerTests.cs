@@ -7,7 +7,6 @@ namespace TestPlatform.CrossPlatEngine.UnitTests.DataCollection
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.Diagnostics;
-    using System.Globalization;
     using System.IO;
     using System.Reflection;
 
@@ -28,7 +27,6 @@ namespace TestPlatform.CrossPlatEngine.UnitTests.DataCollection
     using CoreUtilitiesConstants = Microsoft.VisualStudio.TestPlatform.CoreUtilities.Constants;
 
     using Moq;
-    using System.Collections;
 
     [TestClass]
     public class ProxyDataCollectionManagerTests
@@ -198,7 +196,7 @@ namespace TestPlatform.CrossPlatEngine.UnitTests.DataCollection
 
             mockRunEventsHandler.Verify(eh => eh.HandleLogMessage(TestMessageLevel.Error, It.IsRegex("Exception of type 'System.Exception' was thrown..*")), Times.Once);
             Assert.AreEqual(0, result.EnvironmentVariables.Count);
-            Assert.AreEqual(false, result.AreTestCaseLevelEventsRequired);
+            Assert.IsFalse(result.AreTestCaseLevelEventsRequired);
             Assert.AreEqual(0, result.DataCollectionEventsPort);
         }
 
@@ -229,14 +227,14 @@ namespace TestPlatform.CrossPlatEngine.UnitTests.DataCollection
             var attachmentSet = new AttachmentSet(uri, dispName);
             attachments.Add(attachmentSet);
 
-            this.mockDataCollectionRequestSender.Setup(x => x.SendAfterTestRunStartAndGetResult(It.IsAny<ITestRunEventsHandler>(), It.IsAny<bool>())).Returns(attachments);
+            this.mockDataCollectionRequestSender.Setup(x => x.SendAfterTestRunEndAndGetResult(It.IsAny<ITestRunEventsHandler>(), It.IsAny<bool>())).Returns(attachments);
 
             var result = this.proxyDataCollectionManager.AfterTestRunEnd(false, null);
 
             Assert.IsNotNull(result);
-            Assert.AreEqual(result.Count, 1);
+            Assert.AreEqual(1, result.Count);
             Assert.IsNotNull(result[0]);
-            Assert.AreEqual(result[0].DisplayName, dispName);
+            Assert.AreEqual(dispName, result[0].DisplayName);
             Assert.AreEqual(uri, result[0].Uri);
         }
 
@@ -245,7 +243,7 @@ namespace TestPlatform.CrossPlatEngine.UnitTests.DataCollection
         {
             var mockRunEventsHandler = new Mock<ITestMessageEventHandler>();
             this.mockDataCollectionRequestSender.Setup(
-                    x => x.SendAfterTestRunStartAndGetResult(It.IsAny<ITestMessageEventHandler>(), It.IsAny<bool>()))
+                    x => x.SendAfterTestRunEndAndGetResult(It.IsAny<ITestMessageEventHandler>(), It.IsAny<bool>()))
                 .Throws<Exception>();
 
             var result = this.proxyDataCollectionManager.AfterTestRunEnd(false, mockRunEventsHandler.Object);

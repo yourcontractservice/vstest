@@ -12,7 +12,6 @@ namespace Microsoft.TestPlatform.CommunicationUtilities.UnitTests
     using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Interfaces;
     using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel;
-    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     using Moq;
@@ -32,7 +31,7 @@ namespace Microsoft.TestPlatform.CommunicationUtilities.UnitTests
         }
 
         [TestMethod]
-        public void SendAfterTestRunStartAndGetResultShouldReturnAttachments()
+        public void SendAfterTestRunEndAndGetResultShouldReturnAttachments()
         {
             var datacollectorUri = new Uri("my://custom/datacollector");
             var attachmentUri = new Uri("my://filename.txt");
@@ -43,20 +42,20 @@ namespace Microsoft.TestPlatform.CommunicationUtilities.UnitTests
             this.mockDataSerializer.Setup(x => x.DeserializePayload<Collection<AttachmentSet>>(It.IsAny<Message>())).Returns(new Collection<AttachmentSet>() { attachment });
             this.mockCommunicationManager.Setup(x => x.ReceiveMessage()).Returns(new Message() { MessageType = MessageType.AfterTestRunEndResult, Payload = null });
 
-            var attachmentSets = this.requestSender.SendAfterTestRunStartAndGetResult(null, false);
+            var attachmentSets = this.requestSender.SendAfterTestRunEndAndGetResult(null, false);
 
             Assert.IsNotNull(attachmentSets);
-            Assert.AreEqual(attachmentSets.Count, 1);
+            Assert.AreEqual(1, attachmentSets.Count);
             Assert.IsNotNull(attachmentSets[0]);
-            Assert.AreEqual(attachmentSets[0].DisplayName, displayName);
+            Assert.AreEqual(displayName, attachmentSets[0].DisplayName);
             Assert.AreEqual(datacollectorUri, attachmentSets[0].Uri);
             Assert.AreEqual(attachmentUri, attachmentSets[0].Attachments[0].Uri);
         }
 
         [TestMethod]
-        public void SendAfterTestRunStartAndGetResultShouldNotReturnAttachmentsWhenRequestCancelled()
+        public void SendAfterTestRunEndAndGetResultShouldNotReturnAttachmentsWhenRequestCancelled()
         {
-            var attachmentSets = this.requestSender.SendAfterTestRunStartAndGetResult(null, true);
+            var attachmentSets = this.requestSender.SendAfterTestRunEndAndGetResult(null, true);
 
             Assert.IsNull(attachmentSets);
         }

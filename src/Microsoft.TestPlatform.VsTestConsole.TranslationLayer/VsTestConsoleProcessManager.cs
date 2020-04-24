@@ -9,10 +9,10 @@ namespace Microsoft.TestPlatform.VsTestConsole.TranslationLayer
     using Microsoft.VisualStudio.TestPlatform.Utilities.Helpers;
     using Microsoft.VisualStudio.TestPlatform.Utilities.Helpers.Interfaces;
     using System;
-    using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Globalization;
+    using System.Threading;
     using Resources = Microsoft.VisualStudio.TestPlatform.VsTestConsole.TranslationLayer.Resources.Resources;
 
     /// <summary>
@@ -39,6 +39,11 @@ namespace Microsoft.TestPlatform.VsTestConsole.TranslationLayer
         /// </summary>
         private const string DIAG_ARGUMENT = "/diag:{0};tracelevel={1}";
 
+        /// <summary>
+        /// EndSession timeout
+        /// </summary>
+        private const int ENDSESSIONTIMEOUT = 1000;
+
         private string vstestConsolePath;
         private object syncObject = new object();
         private bool vstestConsoleStarted = false;
@@ -46,6 +51,7 @@ namespace Microsoft.TestPlatform.VsTestConsole.TranslationLayer
         private readonly bool isNetCoreRunner;
         private string dotnetExePath;
         private Process process;
+        private ManualResetEvent processExitedEvent = new ManualResetEvent(false);
 
         internal IFileHelper FileHelper { get; set; }
 
@@ -59,7 +65,7 @@ namespace Microsoft.TestPlatform.VsTestConsole.TranslationLayer
         /// <summary>
         /// Creates an instance of VsTestConsoleProcessManager class.
         /// </summary>
-        /// <param name="vstestConsolePath">The fullpath to vstest.console</param>
+        /// <param name="vstestConsolePath">The full path to vstest.console</param>
         public VsTestConsoleProcessManager(string vstestConsolePath)
         {
             this.FileHelper = new FileHelper();
@@ -135,6 +141,7 @@ namespace Microsoft.TestPlatform.VsTestConsole.TranslationLayer
             this.process.ErrorDataReceived += Process_ErrorDataReceived;
             this.process.BeginOutputReadLine();
             this.process.BeginErrorReadLine();
+            processExitedEvent.Reset();
         }
 
         /// <summary>
@@ -143,8 +150,9 @@ namespace Microsoft.TestPlatform.VsTestConsole.TranslationLayer
         public void ShutdownProcess()
         {
             // Ideally process should die by itself
-            if (IsProcessInitialized())
+            if(!processExitedEvent.WaitOne(ENDSESSIONTIMEOUT) && IsProcessInitialized())
             {
+                EqtTrace.Info($"VsTestConsoleProcessManager.ShutDownProcess : Terminating vstest.console process after waiting for {ENDSESSIONTIMEOUT} milliseconds.");
                 vstestConsoleExited = true;
                 this.process.OutputDataReceived -= Process_OutputDataReceived;
                 this.process.ErrorDataReceived -= Process_ErrorDataReceived;
@@ -173,8 +181,8 @@ namespace Microsoft.TestPlatform.VsTestConsole.TranslationLayer
         {
             lock (syncObject)
             {
-                ShutdownProcess();
-
+                processExitedEvent.Set();
+                vstestConsoleExited = true;
                 this.ProcessExited?.Invoke(sender, e);
             }
         }

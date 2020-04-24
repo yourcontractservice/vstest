@@ -126,6 +126,7 @@ namespace Microsoft.TestPlatform.Extensions.BlameDataCollector
             {
                 var collectDumpNode = this.configurationElement[Constants.DumpModeKey];
                 this.collectProcessDumpOnTrigger = collectDumpNode != null;
+
                 if (this.collectProcessDumpOnTrigger)
                 {
                     this.ValidateAndAddTriggerBasedProcessDumpParameters(collectDumpNode);
@@ -150,7 +151,7 @@ namespace Microsoft.TestPlatform.Extensions.BlameDataCollector
 
         /// <summary>
         /// Disposes of the timer when called to prevent further calls.
-        /// Kills the other instance of procdump if launched for collecting trigger based dumps.
+        /// Kills the other instance of proc dump if launched for collecting trigger based dumps.
         /// Starts and waits for a new proc dump process to collect a single dump and then
         /// kills the testhost process.
         /// </summary>
@@ -198,8 +199,9 @@ namespace Microsoft.TestPlatform.Extensions.BlameDataCollector
                     EqtTrace.Error("BlameCollector.CollectDumpAndAbortTesthost: blame:CollectDumpOnHang was enabled but dump file was not generated.");
                 }
             }
-            catch (FileNotFoundException ex)
+            catch (Exception ex)
             {
+                // Eat up any exception here and log it but proceed with killing the test host process.
                 EqtTrace.Error(ex);
             }
 
@@ -470,7 +472,7 @@ namespace Microsoft.TestPlatform.Extensions.BlameDataCollector
         }
 
         /// <summary>
-        /// Method to deregister handlers and cleanup
+        /// Method to de-register handlers and cleanup
         /// </summary>
         private void DeregisterEvents()
         {
@@ -485,7 +487,8 @@ namespace Microsoft.TestPlatform.Extensions.BlameDataCollector
             {
                 XmlElement resultsDirectoryElement = this.configurationElement["ResultsDirectory"];
                 string resultsDirectory = resultsDirectoryElement != null ? resultsDirectoryElement.InnerText : string.Empty;
-                return resultsDirectory;
+
+                return Environment.ExpandEnvironmentVariables(resultsDirectory);
             }
             catch (NullReferenceException exception)
             {

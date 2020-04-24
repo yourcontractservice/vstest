@@ -20,15 +20,6 @@
       </count-group>
     </header>
     <body>
-      <trans-unit id="DuplicateSource">
-        <source>Duplicate source {0} specified.</source>
-        <target state="translated">중복 소스 {0}을(를) 지정했습니다.</target>
-        <note />
-        <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
-          <target state-qualifier="mt-suggestion">Doppelte Quelle {0} angegeben.</target>
-        </alt-trans>
-        <note from="bb-metadata">fuzzyMatch="15" wordcount="4" adjWordcount="3.4" curWordcount="3.4"</note>
-      </trans-unit>
       <trans-unit id="FileNotFound">
         <source>'{0}' not found.</source>
         <target state="translated">'{0}'을(를) 찾을 수 없습니다.</target>
@@ -299,16 +290,18 @@
       </trans-unit>
       <trans-unit id="RunTestsArgumentHelp">
         <source>[TestFileNames]
-      Run tests from the specified files. Separate multiple test file names
-      by spaces.
+      Run tests from the specified files or wild card pattern. Separate multiple test file names or pattern
+      by spaces. Set console logger verbosity to detailed to view matched test files.
       Examples: mytestproject.dll
-                mytestproject.dll myothertestproject.exe</source>
+                mytestproject.dll myothertestproject.exe
+                testproject*.dll my*project.dll</source>
         <target state="translated">[TestFileNames]
-      지정한 파일에서 테스트를 실행합니다. 테스트 파일 이름이 여러 개이면 공백으로
-      구분합니다.
+      지정된 파일 또는 와일드카드 패턴에서 테스트를 실행합니다. 여러 테스트 파일 이름 또는 패턴을
+      공백으로 구분합니다. 일치한 테스트 파일을 보려면 콘솔 로거 세부 정보 표시를 [상세]로 설정합니다.
       예: mytestproject.dll
-                mytestproject.dll myothertestproject.exe</target>
-        <note />
+                mytestproject.dll myothertestproject.exe
+                testproject*.dll my*project.dll</target>
+        <note></note>
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">[TestFileNames]
       Führen Sie Tests aus den angegebenen Dateien. Trennen Sie mehrere Test-Dateinamen
@@ -1651,6 +1644,23 @@
       <trans-unit id="TestRunSummarySkippedTests">
         <source>    Skipped: {0}</source>
         <target state="translated">    건너뜀: {0}</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="InvalidArgument">
+        <source>The argument {0} is invalid. Please use the /help option to check the list of valid arguments.</source>
+        <target state="translated">{0} 인수가 잘못되었습니다. /help 옵션을 사용하여 유효한 인수 목록을 확인하세요.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="TestSourcesDiscovered">
+        <source>A total of {0} test files matched the specified pattern.</source>
+        <target state="translated">지정된 패턴과 일치한 총 테스트 파일 수는 {0}개입니다.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="InvalidTestRunParameterArgument">
+        <source>The test run parameter argument '{0}' is invalid. Please use the format below.
+     Format: TestRunParameters.Parameter(name=\"&lt;name&gt;\", value=\"&lt;value&gt;\")</source>
+        <target state="translated">테스트 실행 매개 변수 인수 '{0}'이(가) 잘못되었습니다. 아래 형식을 사용하세요.
+     형식: TestRunParameters.Parameter(name=\"&lt;name&gt;\", value=\"&lt;value&gt;\")</target>
         <note></note>
       </trans-unit>
     </body>

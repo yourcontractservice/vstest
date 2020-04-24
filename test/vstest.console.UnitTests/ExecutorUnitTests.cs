@@ -46,7 +46,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests
             Assert.AreEqual(1, exitCode, "Exit code must be One for bad arguments");
 
             // Verify that messages exist
-            Assert.IsTrue(mockOutput.Messages.Count > 0, "Executor must print atleast copyright info");
+            Assert.IsTrue(mockOutput.Messages.Count > 0, "Executor must print at least copyright info");
             Assert.IsNotNull(mockOutput.Messages.First().Message, "First Printed Message cannot be null or empty");
 
             // Just check first 20 characters - don't need to check whole thing as assembly version is variable
@@ -131,7 +131,31 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests
 
             Assert.AreEqual(1, exitCode, "Exit code must be One when no arguments are provided.");
 
-            Assert.IsTrue(mockOutput.Messages.Any(message => message.Message.Contains(string.Format(CommandLineResources.TestSourceFileNotFound, badArg))));
+            Assert.IsTrue(mockOutput.Messages.Any(message => message.Message.Contains(string.Format(CommandLineResources.InvalidArgument, badArg))));
+        }
+
+        [TestMethod]
+        public void ExecutorWithInvalidArgsShouldPrintHowToUseHelpOption()
+        {
+            var mockOutput = new MockOutput();
+            string badArg = "--invalidArg";
+            var exitCode = new Executor(mockOutput, this.mockTestPlatformEventSource.Object).Execute(badArg);
+
+            Assert.AreEqual(1, exitCode, "Exit code must be One when no arguments are provided.");
+
+            Assert.IsTrue(mockOutput.Messages.Any(message => message.Message.Contains(string.Format(CommandLineResources.InvalidArgument, badArg))));
+        }
+
+        [TestMethod]
+        public void ExecutorWithInvalidArgsAndValueShouldPrintErrorMessage()
+        {
+            var mockOutput = new MockOutput();
+            string badArg = "--invalidArg:xyz";
+            var exitCode = new Executor(mockOutput, this.mockTestPlatformEventSource.Object).Execute(badArg);
+
+            Assert.AreEqual(1, exitCode, "Exit code must be One when no arguments are provided.");
+
+            Assert.IsTrue(mockOutput.Messages.Any(message => message.Message.Contains(string.Format(CommandLineResources.InvalidArgument, badArg))));
         }
 
         /// <summary>
@@ -143,9 +167,9 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests
             var mockOutput = new MockOutput();
             var exitCode = new Executor(mockOutput, this.mockTestPlatformEventSource.Object).Execute(null);
             RunConfiguration runConfiguration = XmlRunSettingsUtilities.GetRunConfigurationNode(RunSettingsManager.Instance.ActiveRunSettings.SettingsXml);
-            Assert.AreEqual(runConfiguration.ResultsDirectory, Constants.DefaultResultsDirectory);
-            Assert.AreEqual(runConfiguration.TargetFramework.ToString(), Framework.DefaultFramework.ToString());
-            Assert.AreEqual(runConfiguration.TargetPlatform, Constants.DefaultPlatform);
+            Assert.AreEqual(Constants.DefaultResultsDirectory, runConfiguration.ResultsDirectory);
+            Assert.AreEqual(Framework.DefaultFramework.ToString(), runConfiguration.TargetFramework.ToString());
+            Assert.AreEqual(Constants.DefaultPlatform, runConfiguration.TargetPlatform);
         }
 
         [TestMethod]

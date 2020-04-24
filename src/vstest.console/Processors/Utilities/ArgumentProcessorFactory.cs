@@ -372,7 +372,6 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.Processors
                         throw;
                     }
                 }
-
                 return instance;
             }, System.Threading.LazyThreadSafetyMode.PublicationOnly);
             processor.Executor = lazyArgumentProcessor;

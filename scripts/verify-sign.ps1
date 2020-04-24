@@ -38,11 +38,11 @@ function Verify-Assemblies
     $artifactsDirectory = Join-Path $env:TP_OUT_DIR $TPB_Configuration
     foreach ($pattern in $TPB_AssembliesPattern) {
         Write-Log "... Pattern: $pattern"
-        Get-ChildItem -Recurse -Include $pattern $artifactsDirectory | Where-Object { (!$_.PSIsContainer) -and !($($_.FullName).Contains('VSIX\obj')) -and !($($_.FullName).Contains('sign_temp'))} | % {
+        Get-ChildItem -Recurse -Include $pattern $artifactsDirectory | Where-Object { (!$_.PSIsContainer) -and !($($_.FullName).Contains('VSIX\obj')) -and !($($_.FullName).Contains('publishTemp')) -and !($($_.FullName).Contains('sign_temp'))} | % {
             $signature = Get-AuthenticodeSignature -FilePath $_.FullName
 
             if ($signature.Status -eq "Valid") {
-                if ($signature.SignerCertificate.Thumbprint -eq $TPB_SignCertificate) {
+                if ($signature.SignerCertificate.Subject -eq "CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US") {
                     Write-Log "Valid: $($_.FullName)"
                 }
                 else {
@@ -60,6 +60,10 @@ function Verify-Assemblies
                     }
 		    # For some dlls e.g. "Microsoft.VisualStudio.ArchitectureTools.PEReader.dll", sign certificate is different signature. Skip such binaries.
                     elseif ($signature.SignerCertificate.Thumbprint -eq "9DC17888B5CFAD98B3CB35C1994E96227F061675") {
+                        Write-Log "Valid (Prod Signed): $($_.FullName)."
+                    }
+		    # For some dlls sign certificate is different signature. Skip such binaries.
+                    elseif ($signature.SignerCertificate.Thumbprint -eq "62009AAABDAE749FD47D19150958329BF6FF4B34") {
                         Write-Log "Valid (Prod Signed): $($_.FullName)."
                     }
                     else {

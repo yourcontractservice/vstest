@@ -303,50 +303,25 @@ namespace TestPlatform.CrossPlatEngine.UnitTests.Client
         }
 
         [TestMethod]
-        public void StartTestRunShouldInitializeExtensionsWithExistingDataCOllectorExtensions()
-        {
-            TestPluginCache.Instance = null;
-            TestPluginCache.Instance.UpdateExtensions(new List<string> { "abc.TestAdapter.dll", "def.TestAdapter.dll", "xyz.TestAdapter.dll", "abc.DataCollector.dll" }, false);
-            var expectedOutputPaths = new[] { "abc.TestAdapter.dll", "xyz.TestAdapter.dll", "abc.DataCollector.dll" };
-
-            this.mockTestHostManager.SetupGet(th => th.Shared).Returns(false);
-            this.mockRequestSender.Setup(s => s.WaitForRequestHandlerConnection(It.IsAny<int>(), It.IsAny<CancellationToken>())).Returns(true);
-            this.mockTestHostManager.Setup(th => th.GetTestPlatformExtensions(It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>())).Returns((IEnumerable<string> sources, IEnumerable<string> extensions) =>
-            {
-                return extensions.Select(extension => { return Path.GetFileName(extension); });
-            });
-
-            this.mockFileHelper.Setup(fh => fh.Exists(It.IsAny<string>())).Returns((string extensionPath) =>
-            {
-                return !extensionPath.Contains("def.TestAdapter.dll");
-            });
-
-            this.mockFileHelper.Setup(fh => fh.Exists("abc.TestAdapter.dll")).Returns(true);
-            this.mockFileHelper.Setup(fh => fh.Exists("xyz.TestAdapter.dll")).Returns(true);
-            this.mockFileHelper.Setup(fh => fh.Exists("abc.DataCollector.dll")).Returns(true);
-
-            var mockTestRunEventsHandler = new Mock<ITestRunEventsHandler>();
-            this.testExecutionManager.StartTestRun(this.mockTestRunCriteria.Object, mockTestRunEventsHandler.Object);
-
-            this.mockRequestSender.Verify(s => s.InitializeExecution(expectedOutputPaths), Times.Once);
-        }
-
-        [TestMethod]
         public void SetupChannelShouldThrowExceptionIfClientConnectionTimeout()
         {
+            string runsettings = "<?xml version=\"1.0\" encoding=\"utf-16\"?>\r\n<RunSettings>\r\n  <DataCollectionRunSettings>\r\n    <DataCollectors >{0}</DataCollectors>\r\n  </DataCollectionRunSettings>\r\n</RunSettings>";
+
             this.mockRequestSender.Setup(s => s.WaitForRequestHandlerConnection(It.IsAny<int>(), It.IsAny<CancellationToken>())).Returns(false);
             this.mockTestHostManager.Setup(tmh => tmh.LaunchTestHostAsync(It.IsAny<TestProcessStartInfo>(), It.IsAny<CancellationToken>())).Returns(Task.FromResult(false));
 
-            Assert.ThrowsException<TestPlatformException>(() => this.testExecutionManager.SetupChannel(new List<string> { "source.dll" }));
+            Assert.ThrowsException<TestPlatformException>(() => this.testExecutionManager.SetupChannel(new List<string> { "source.dll" }, runsettings));
         }
 
         [TestMethod]
         public void SetupChannelShouldThrowExceptionIfTestHostExitedBeforeConnectionIsEstablished()
         {
+            string runsettings = "<?xml version=\"1.0\" encoding=\"utf-16\"?>\r\n<RunSettings>\r\n  <DataCollectionRunSettings>\r\n    <DataCollectors >{0}</DataCollectors>\r\n  </DataCollectionRunSettings>\r\n</RunSettings>";
+
             this.mockRequestSender.Setup(s => s.WaitForRequestHandlerConnection(It.IsAny<int>(), It.IsAny<CancellationToken>())).Returns(false);
             this.mockTestHostManager.Setup(tmh => tmh.LaunchTestHostAsync(It.IsAny<TestProcessStartInfo>(), It.IsAny<CancellationToken>())).Returns(Task.FromResult(true)).Callback(() => { this.mockTestHostManager.Raise(t => t.HostExited += null, new HostProviderEventArgs("I crashed!")); });
 
-            Assert.AreEqual(string.Format(CrossPlatEngineResources.Resources.TestHostExitedWithError, "I crashed!"), Assert.ThrowsException<TestPlatformException>(() => this.testExecutionManager.SetupChannel(new List<string> { "source.dll" })).Message);
+            Assert.AreEqual(string.Format(CrossPlatEngineResources.Resources.TestHostExitedWithError, "I crashed!"), Assert.ThrowsException<TestPlatformException>(() => this.testExecutionManager.SetupChannel(new List<string> { "source.dll" }, runsettings)).Message);
         }
 
         [TestMethod]
@@ -522,9 +497,11 @@ namespace TestPlatform.CrossPlatEngine.UnitTests.Client
         [TestMethod]
         public void CloseShouldSignalToServerSessionEndIfTestHostWasLaunched()
         {
+            string runsettings = "<?xml version=\"1.0\" encoding=\"utf-16\"?>\r\n<RunSettings>\r\n  <DataCollectionRunSettings>\r\n    <DataCollectors >{0}</DataCollectors>\r\n  </DataCollectionRunSettings>\r\n</RunSettings>";
+
             this.mockRequestSender.Setup(s => s.WaitForRequestHandlerConnection(It.IsAny<int>(), It.IsAny<CancellationToken>())).Returns(true);
 
-            this.testExecutionManager.SetupChannel(new List<string> { "source.dll" });
+            this.testExecutionManager.SetupChannel(new List<string> { "source.dll" }, runsettings);
 
             this.testExecutionManager.Close();
 
@@ -542,9 +519,11 @@ namespace TestPlatform.CrossPlatEngine.UnitTests.Client
         [TestMethod]
         public void CloseShouldSignalServerSessionEndEachTime()
         {
+            string runsettings = "<?xml version=\"1.0\" encoding=\"utf-16\"?>\r\n<RunSettings>\r\n  <DataCollectionRunSettings>\r\n    <DataCollectors >{0}</DataCollectors>\r\n  </DataCollectionRunSettings>\r\n</RunSettings>";
+
             this.mockRequestSender.Setup(s => s.WaitForRequestHandlerConnection(It.IsAny<int>(), It.IsAny<CancellationToken>())).Returns(true);
 
-            this.testExecutionManager.SetupChannel(new List<string> { "source.dll" });
+            this.testExecutionManager.SetupChannel(new List<string> { "source.dll" }, runsettings);
 
             this.testExecutionManager.Close();
             this.testExecutionManager.Close();

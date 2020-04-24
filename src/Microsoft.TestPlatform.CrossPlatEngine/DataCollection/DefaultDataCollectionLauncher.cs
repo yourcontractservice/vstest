@@ -30,10 +30,10 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.DataCollection
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="DefaultDataCollectionLauncher"/> class. 
+        /// Initializes a new instance of the <see cref="DefaultDataCollectionLauncher"/> class.
         /// </summary>
         /// <param name="processHelper">
-        /// The process helper. 
+        /// The process helper.
         /// </param>
         /// <param name="messageLogger">
         /// The message Logger.
@@ -69,7 +69,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.DataCollection
             }
 
             var argumentsString = string.Join(" ", commandLineArguments);
-            var dataCollectorProcess = this.processHelper.LaunchProcess(dataCollectorProcessPath, argumentsString, Directory.GetCurrentDirectory(), environmentVariables, this.ErrorReceivedCallback, this.ExitCallBack);
+            var dataCollectorProcess = this.processHelper.LaunchProcess(dataCollectorProcessPath, argumentsString, Directory.GetCurrentDirectory(), environmentVariables, this.ErrorReceivedCallback, this.ExitCallBack, null) ;
             this.DataCollectorProcessId = this.processHelper.GetProcessId(dataCollectorProcess);
             return this.DataCollectorProcessId;
         }

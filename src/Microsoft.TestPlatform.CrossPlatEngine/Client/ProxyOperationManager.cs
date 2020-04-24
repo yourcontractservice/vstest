@@ -25,7 +25,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
     using CrossPlatEngineResources = Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Resources.Resources;
     using CommunicationUtilitiesResources = Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Resources.Resources;
     using CoreUtilitiesConstants = Microsoft.VisualStudio.TestPlatform.CoreUtilities.Constants;
-   
+
     /// <summary>
     /// Base class for any operations that the client needs to drive through the engine.
     /// </summary>
@@ -49,7 +49,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
         #region Constructors
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ProxyOperationManager"/> class. 
+        /// Initializes a new instance of the <see cref="ProxyOperationManager"/> class.
         /// </summary>
         /// <param name="requestData"></param>
         /// <param name="requestSender">Request Sender instance.</param>
@@ -94,9 +94,9 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
         /// <param name="cancellationToken">
         /// </param>
         /// <returns>
-        /// Returns true if Communation is established b/w runner and host
+        /// Returns true if Communication is established b/w runner and host
         /// </returns>
-        public virtual bool SetupChannel(IEnumerable<string> sources)
+        public virtual bool SetupChannel(IEnumerable<string> sources, string runSettings)
         {
             this.CancellationTokenSource.Token.ThrowTestPlatformExceptionIfCancellationRequested();
             var connTimeout = EnvironmentHelper.GetConnectionTimeout();
@@ -120,8 +120,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
                 this.testHostManager.HostLaunched += this.TestHostManagerHostLaunched;
                 this.testHostManager.HostExited += this.TestHostManagerHostExited;
 
+                // Get envVars from run settings
+                var envVars = InferRunSettingsHelper.GetEnvironmentVariables(runSettings);
+
                 // Get the test process start info
-                var testHostStartInfo = this.UpdateTestProcessStartInfo(this.testHostManager.GetTestHostProcessStartInfo(sources, null, connectionInfo));
+                var testHostStartInfo = this.UpdateTestProcessStartInfo(this.testHostManager.GetTestHostProcessStartInfo(sources, envVars, connectionInfo));
                 try
                 {
                     // Launch the test host.
@@ -144,7 +147,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
 
                 // Warn the user that execution will wait for debugger attach.
                 var hostDebugEnabled = Environment.GetEnvironmentVariable("VSTEST_HOST_DEBUG");
-                if (!string.IsNullOrEmpty(hostDebugEnabled) && hostDebugEnabled.Equals("1", StringComparison.Ordinal))
+                var nativeHostDebugEnabled = Environment.GetEnvironmentVariable("VSTEST_HOST_NATIVE_DEBUG");
+
+                if (!string.IsNullOrEmpty(hostDebugEnabled) && hostDebugEnabled.Equals("1", StringComparison.Ordinal) ||
+                    new PlatformEnvironment().OperatingSystem.Equals(PlatformOperatingSystem.Windows) &&
+                    !string.IsNullOrEmpty(nativeHostDebugEnabled) && nativeHostDebugEnabled.Equals("1", StringComparison.Ordinal))
                 {
                     ConsoleOutput.Instance.WriteLine(CrossPlatEngineResources.HostDebuggerWarning, OutputLevel.Warning);
                     ConsoleOutput.Instance.WriteLine(
@@ -160,6 +167,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
                 if (!this.testHostLaunched ||
                     !this.RequestSender.WaitForRequestHandlerConnection(connTimeout * 1000, this.CancellationTokenSource.Token))
                 {
+                    EqtTrace.Verbose($"Test host failed to start Test host launched:{testHostLaunched} test host exited: {testHostExited.IsSet}");
                     // Throw a test platform exception with the appropriate message if user requested cancellation
                     this.CancellationTokenSource.Token.ThrowTestPlatformExceptionIfCancellationRequested();
 
@@ -202,7 +210,9 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
 
                     // We want to give test host a chance to safely close.
                     // The upper bound for wait should be 100ms.
-                    this.testHostExited.Wait(100);
+                    var timeout = 100;
+                    EqtTrace.Verbose("ProxyOperationManager.Close: waiting for test host to exit for {0} ms", timeout);
+                    this.testHostExited.Wait(timeout);
                 }
             }
             catch (Exception ex)
@@ -217,7 +227,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
 
                 EqtTrace.Warning("ProxyOperationManager: Timed out waiting for test host to exit. Will terminate process.");
 
-                // please clean up test host. 
+                // please clean up test host.
                 this.testHostManager.CleanTestHostAsync(CancellationToken.None).Wait();
 
                 this.testHostManager.HostExited -= this.TestHostManagerHostExited;
@@ -228,11 +238,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
         #endregion
 
         /// <summary>
-        /// This method is exposed to enable drived classes to modify TestProcessStartInfo. E.g. DataCollection need additional environment variables to be passed, etc.  
+        /// This method is exposed to enable derived classes to modify TestProcessStartInfo. E.g. DataCollection need additional environment variables to be passed, etc.
         /// </summary>
         /// <param name="testProcessStartInfo">
         /// The sources.
-        /// </param>        
+        /// </param>
         /// <returns>
         /// The <see cref="TestProcessStartInfo"/>.
         /// </returns>
@@ -264,7 +274,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
         /// This function will remove the unknown runsettings node from runsettings for old testhost who throws exception for unknown node.
         /// </summary>
         /// <param name="runsettingsXml">runsettings string</param>
-        /// <returns>runsetting after removing unrequired nodes</returns>
+        /// <returns>runsetting after removing un-required nodes</returns>
         protected string RemoveNodesFromRunsettingsIfRequired(string runsettingsXml, Action<TestMessageLevel, string> logMessage)
         {
             var updatedRunSettingsXml = runsettingsXml;
@@ -308,16 +318,24 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
 
         private void TestHostManagerHostExited(object sender, HostProviderEventArgs e)
         {
+            EqtTrace.Verbose("CrossPlatEngine.TestHostManagerHostExited: calling on client process exit callback.");
             this.testHostProcessStdError = e.Data;
-            this.RequestSender.OnClientProcessExit(this.testHostProcessStdError);
 
+            // this needs to be set before we call the OnClientProcess exit
+            // because the OnClientProcess will short-circuit WaitForRequestHandlerConnection in SetupChannel
+            // that then continues to throw an exception and checks if the testhost process exited
+            // if not it reports timeout, if we don't set this before OnClientProcessExit we will report timeout
+            // even though we exited the test host before even attempting the connect
             this.testHostExited.Set();
+            this.RequestSender.OnClientProcessExit(this.testHostProcessStdError);
         }
 
         private void ThrowOnTestHostExited(bool testHostExited)
-        {
+        {            
             if (testHostExited)
             {
+                // we might consider passing standard output here in case standard error is not available because some 
+                // errors don't end up in the standard error output
                 throw new TestPlatformException(string.Format(CrossPlatEngineResources.TestHostExitedWithError, this.testHostProcessStdError));
             }
         }
@@ -327,7 +345,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
             // Failed to launch testhost process.
             var errorMsg = CrossPlatEngineResources.InitializationFailed;
 
-            // Testhost launched but Timeout occured due to machine slowness.
+            // Testhost launched but Timeout occurred due to machine slowness.
             if (this.testHostLaunched)
             {
                 errorMsg = string.Format(

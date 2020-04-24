@@ -20,15 +20,6 @@
       </count-group>
     </header>
     <body>
-      <trans-unit id="DuplicateSource">
-        <source>Duplicate source {0} specified.</source>
-        <target state="translated">Zadal se duplicitní zdroj {0}.</target>
-        <note />
-        <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
-          <target state-qualifier="mt-suggestion">Doppelte Quelle {0} angegeben.</target>
-        </alt-trans>
-        <note from="bb-metadata">fuzzyMatch="15" wordcount="4" adjWordcount="3.4" curWordcount="3.4"</note>
-      </trans-unit>
       <trans-unit id="FileNotFound">
         <source>'{0}' not found.</source>
         <target state="translated">{0} se nenašel.</target>
@@ -299,16 +290,18 @@
       </trans-unit>
       <trans-unit id="RunTestsArgumentHelp">
         <source>[TestFileNames]
-      Run tests from the specified files. Separate multiple test file names
-      by spaces.
+      Run tests from the specified files or wild card pattern. Separate multiple test file names or pattern
+      by spaces. Set console logger verbosity to detailed to view matched test files.
       Examples: mytestproject.dll
-                mytestproject.dll myothertestproject.exe</source>
+                mytestproject.dll myothertestproject.exe
+                testproject*.dll my*project.dll</source>
         <target state="translated">[TestFileNames]
-      Spustí testy ze zadaných souborů. Pokud máte názvů souborů více, oddělte je
-      mezerami.
-      Příklad: mytestproject.dll
-                mytestproject.dll myothertestproject.exe</target>
-        <note />
+      Spusťte testy ze zadaných souborů nebo ze vzoru se zástupnými znaky. Oddělte více názvů nebo vzorů testovacích souborů pomocí mezer.
+      Nastavte úroveň podrobností protokolovacího nástroje konzoly na podrobnou, aby se zobrazily odpovídající testovací soubory.
+      Příklady: mytestproject.dll
+                mytestproject.dll myothertestproject.exe
+                testproject*.dll my*project.dll</target>
+        <note></note>
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">[TestFileNames]
       Führen Sie Tests aus den angegebenen Dateien. Trennen Sie mehrere Test-Dateinamen
@@ -595,7 +588,7 @@
       </trans-unit>
       <trans-unit id="SwitchToNoIsolation">
         <source>Using Isolation mode to run the tests as diagnostic data adapters were enabled in the runsettings. Use the /inIsolation parameter to suppress this warning.</source>
-        <target state="translated">Ke spouštění testů se používá režim izolace, protože v parametrech spouštění se povolily adaptéry diagnostických dat. Pokud chcete toto upozornění potlačit, použijte parametr /InIsolation.</target>
+        <target state="translated">Ke spouštění testů se používá režim izolace, protože v nastavení Runsettings se povolily adaptéry diagnostických dat. Pokud chcete toto upozornění potlačit, použijte parametr /InIsolation.</target>
         <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Unter Verwendung des Isolationsmodus zum Ausführen der Tests als Adapter für diagnostische Daten in die Runsettings aktiviert wurden. Verwenden Sie den Parameter /inIsolation Sie diese Warnung unterdrücken.</target>
@@ -1426,7 +1419,7 @@
       </trans-unit>
       <trans-unit id="MalformedRunSettingsKey">
         <source>One or more runsettings provided contain invalid token</source>
-        <target state="translated">Nejméně jeden z parametrů spouštění obsahuje neplatný token.</target>
+        <target state="translated">Nejméně jedno z nastavení Runsettings obsahuje neplatný token</target>
         <note />
       </trans-unit>
       <trans-unit id="ResultsDirectoryArgumentHelp">
@@ -1651,6 +1644,23 @@
       <trans-unit id="TestRunSummarySkippedTests">
         <source>    Skipped: {0}</source>
         <target state="translated">    Přeskočené: {0}</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="InvalidArgument">
+        <source>The argument {0} is invalid. Please use the /help option to check the list of valid arguments.</source>
+        <target state="translated">Argument {0} není platný. Pokud si chcete zobrazit seznam platných argumentů, použijte prosím možnost /help.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="TestSourcesDiscovered">
+        <source>A total of {0} test files matched the specified pattern.</source>
+        <target state="translated">Celkový počet testovacích souborů, které odpovídají zadanému vzoru: {0}</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="InvalidTestRunParameterArgument">
+        <source>The test run parameter argument '{0}' is invalid. Please use the format below.
+     Format: TestRunParameters.Parameter(name=\"&lt;name&gt;\", value=\"&lt;value&gt;\")</source>
+        <target state="translated">Argument parametru testovacího běhu {0} není platný. Použijte prosím formát uvedený níže.
+     Formát: TestRunParameters.Parameter(name=\"&lt;name&gt;\", value=\"&lt;value&gt;\")</target>
         <note></note>
       </trans-unit>
     </body>

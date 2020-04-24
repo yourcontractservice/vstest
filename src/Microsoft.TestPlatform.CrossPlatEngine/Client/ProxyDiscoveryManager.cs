@@ -6,11 +6,9 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Threading;
 
     using Microsoft.VisualStudio.TestPlatform.Common;
     using Microsoft.VisualStudio.TestPlatform.Common.ExtensionFramework;
-    using Microsoft.VisualStudio.TestPlatform.Common.Telemetry;
     using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
     using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Interfaces;
     using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.ObjectModel;
@@ -98,7 +96,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
             this.baseTestDiscoveryEventsHandler = eventHandler;
             try
             {
-                this.isCommunicationEstablished = this.SetupChannel(discoveryCriteria.Sources);
+                this.isCommunicationEstablished = this.SetupChannel(discoveryCriteria.Sources, discoveryCriteria.RunSettings);
 
                 if (this.isCommunicationEstablished)
                 {
@@ -140,7 +138,9 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
         /// <inheritdoc/>
         public void Abort()
         {
-            // This is no-op for the moment. There is no discovery abort message?
+            // Cancel fast, try to stop testhost deployment/launch
+            this.CancellationTokenSource.Cancel();
+            this.Close();
         }
 
         /// <inheritdoc/>

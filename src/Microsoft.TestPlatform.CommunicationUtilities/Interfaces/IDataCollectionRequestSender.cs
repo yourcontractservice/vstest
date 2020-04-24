@@ -60,17 +60,17 @@ namespace Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.DataCollect
         BeforeTestRunStartResult SendBeforeTestRunStartAndGetResult(string settingXml, IEnumerable<string> sources, ITestMessageEventHandler runEventsHandler);
 
         /// <summary>
-        /// Sends the AfterTestRunStart event and waits for result
+        /// Sends the AfterTestRunEnd event and waits for result
         /// </summary>
         /// <param name="runEventsHandler">
         /// Test message event handler for handling messages.
         /// </param>
         /// <param name="isCancelled">
-        /// The value to specify whether the test run is cancelled or not.
+        /// The value to specify whether the test run is canceled or not.
         /// </param>
         /// <returns>
         /// DataCollector attachments
         /// </returns>
-        Collection<AttachmentSet> SendAfterTestRunStartAndGetResult(ITestMessageEventHandler runEventsHandler, bool isCancelled);
+        Collection<AttachmentSet> SendAfterTestRunEndAndGetResult(ITestMessageEventHandler runEventsHandler, bool isCancelled);
     }
 }

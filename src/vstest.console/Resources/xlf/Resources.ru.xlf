@@ -20,15 +20,6 @@
       </count-group>
     </header>
     <body>
-      <trans-unit id="DuplicateSource">
-        <source>Duplicate source {0} specified.</source>
-        <target state="translated">Указан повторяющийся источник {0}.</target>
-        <note />
-        <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
-          <target state-qualifier="mt-suggestion">Doppelte Quelle {0} angegeben.</target>
-        </alt-trans>
-        <note from="bb-metadata">fuzzyMatch="15" wordcount="4" adjWordcount="3.4" curWordcount="3.4"</note>
-      </trans-unit>
       <trans-unit id="FileNotFound">
         <source>'{0}' not found.</source>
         <target state="translated">"{0}": не найдено.</target>
@@ -299,16 +290,18 @@
       </trans-unit>
       <trans-unit id="RunTestsArgumentHelp">
         <source>[TestFileNames]
-      Run tests from the specified files. Separate multiple test file names
-      by spaces.
+      Run tests from the specified files or wild card pattern. Separate multiple test file names or pattern
+      by spaces. Set console logger verbosity to detailed to view matched test files.
       Examples: mytestproject.dll
-                mytestproject.dll myothertestproject.exe</source>
+                mytestproject.dll myothertestproject.exe
+                testproject*.dll my*project.dll</source>
         <target state="translated">[TestFileNames]
-      Выполнение тестов из указанных файлов. При вводе нескольких имен файла теста они разделяются
-      пробелами.
+      Выполняйте тесты из указанных файлов или шаблона с подстановочными знаками. Разделяйте несколько шаблонов или имен тестовых файлов
+      пробелами. Задайте высокий уровень детализации для средства ведения журнала консоли, чтобы просмотреть соответствующие тестовые файлы.
       Примеры: mytestproject.dll
-                mytestproject.dll myothertestproject.exe</target>
-        <note />
+                mytestproject.dll myothertestproject.exe
+                testproject*.dll my*project.dll</target>
+        <note></note>
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">[TestFileNames]
       Führen Sie Tests aus den angegebenen Dateien. Trennen Sie mehrere Test-Dateinamen
@@ -595,7 +588,7 @@
       </trans-unit>
       <trans-unit id="SwitchToNoIsolation">
         <source>Using Isolation mode to run the tests as diagnostic data adapters were enabled in the runsettings. Use the /inIsolation parameter to suppress this warning.</source>
-        <target state="translated">Используется режим изоляции для запуска тестов, так как в параметрах запуска включены адаптеры диагностических данных. Используйте параметр /InIsolation, чтобы отключить это предупреждение.</target>
+        <target state="translated">Используется режим изоляции для запуска тестов, так как в файле параметров запуска RUNSETTINGS включены адаптеры диагностических данных. Используйте параметр /InIsolation, чтобы отключить это предупреждение.</target>
         <note />
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">Unter Verwendung des Isolationsmodus zum Ausführen der Tests als Adapter für diagnostische Daten in die Runsettings aktiviert wurden. Verwenden Sie den Parameter /inIsolation Sie diese Warnung unterdrücken.</target>
@@ -1426,7 +1419,7 @@
       </trans-unit>
       <trans-unit id="MalformedRunSettingsKey">
         <source>One or more runsettings provided contain invalid token</source>
-        <target state="translated">Один параметр запуска (или несколько) включает в себя недопустимый токен.</target>
+        <target state="translated">Один или несколько файлов RUNSETTINGS включают в себя недопустимый токен</target>
         <note />
       </trans-unit>
       <trans-unit id="ResultsDirectoryArgumentHelp">
@@ -1651,6 +1644,23 @@
       <trans-unit id="TestRunSummarySkippedTests">
         <source>    Skipped: {0}</source>
         <target state="translated">    Пропущено: {0}</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="InvalidArgument">
+        <source>The argument {0} is invalid. Please use the /help option to check the list of valid arguments.</source>
+        <target state="translated">Аргумент {0} недопустим. Используйте параметр /help, чтобы просмотреть список допустимых аргументов.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="TestSourcesDiscovered">
+        <source>A total of {0} test files matched the specified pattern.</source>
+        <target state="translated">Общее количество тестовых файлов ({0}), соответствующих указанному шаблону.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="InvalidTestRunParameterArgument">
+        <source>The test run parameter argument '{0}' is invalid. Please use the format below.
+     Format: TestRunParameters.Parameter(name=\"&lt;name&gt;\", value=\"&lt;value&gt;\")</source>
+        <target state="translated">Недопустимый аргумент "{0}" для параметра тестового запуска. Используйте указанный ниже формат.
+     Формат: TestRunParameters.Parameter(name=\"&lt;name&gt;\", value=\"&lt;value&gt;\")</target>
         <note></note>
       </trans-unit>
     </body>

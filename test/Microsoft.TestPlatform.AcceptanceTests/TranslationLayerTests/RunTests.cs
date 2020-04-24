@@ -11,6 +11,7 @@ namespace Microsoft.TestPlatform.AcceptanceTests.TranslationLayerTests
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Linq;
     using VisualStudio.TestPlatform.ObjectModel.Logging;
 
@@ -50,6 +51,25 @@ namespace Microsoft.TestPlatform.AcceptanceTests.TranslationLayerTests
             Assert.AreEqual(2, this.runEventHandler.TestResults.Count(t => t.Outcome == TestOutcome.Passed));
             Assert.AreEqual(2, this.runEventHandler.TestResults.Count(t => t.Outcome == TestOutcome.Failed));
             Assert.AreEqual(2, this.runEventHandler.TestResults.Count(t => t.Outcome == TestOutcome.Skipped));
+        }
+
+        [TestMethod]
+        [NetFullTargetFrameworkDataSource]
+        [NetCoreTargetFrameworkDataSource]
+        public void EndSessionShouldEnsureVstestConsoleProcessDies(RunnerInfo runnerInfo)
+        {
+            var numOfProcesses = Process.GetProcessesByName("vstest.console").Length;
+
+            AcceptanceTestBase.SetTestEnvironment(this.testEnvironment, runnerInfo);
+            this.Setup();
+
+            this.vstestConsoleWrapper.RunTests(this.GetTestAssemblies(), this.GetDefaultRunSettings(), this.runEventHandler);
+            this.vstestConsoleWrapper?.EndSession();
+
+            // Assert
+            Assert.AreEqual(numOfProcesses, Process.GetProcessesByName("vstest.console").Length);
+
+            this.vstestConsoleWrapper = null;
         }
 
         [TestMethod]
@@ -110,10 +130,7 @@ namespace Microsoft.TestPlatform.AcceptanceTests.TranslationLayerTests
                 return;
             }
 
-            var source = new List<string>()
-                             {
-                                 this.GetAssetFullPath("SimpleTestProject3.dll")
-                             };
+            var source = new[] { this.GetAssetFullPath("SimpleTestProject3.dll") };
 
             this.vstestConsoleWrapper.RunTests(
                 source,
@@ -121,25 +138,11 @@ namespace Microsoft.TestPlatform.AcceptanceTests.TranslationLayerTests
                 new TestPlatformOptions() { TestCaseFilter = "ExitWithStackoverFlow" },
                 this.runEventHandler);
 
-            var errorMessage = "The active test run was aborted. Reason: Process is terminated due to StackOverflowException.\r\n";
-            if (runnerInfo.TargetFramework.StartsWith("netcoreapp2."))
-            {
-                errorMessage =
-                    "The active test run was aborted. Reason: Process is terminating due to StackOverflowException.\r\n";
-            }
+            var errorMessage = runnerInfo.TargetFramework == "net451"
+                ? "The active test run was aborted. Reason: Test host process crashed : Process is terminated due to StackOverflowException.\r\n"
+                : "The active test run was aborted. Reason: Test host process crashed : Process is terminating due to StackOverflowException.\r\n";
 
-            // Assert
-
-            // Not happy with this check, but have seen this behaviour on some machines.
-            // What this essentially means, that atleast run was aborted.
-            if (runnerInfo.RunnerFramework.StartsWith("netcoreapp"))
-            {
-                Assert.IsTrue(errorMessage.StartsWith(this.runEventHandler.LogMessage));
-            }
-            else
-            {
-                Assert.AreEqual(errorMessage, this.runEventHandler.LogMessage);
-            }
+            Assert.AreEqual(errorMessage, this.runEventHandler.LogMessage);
         }
 
         [TestMethod]

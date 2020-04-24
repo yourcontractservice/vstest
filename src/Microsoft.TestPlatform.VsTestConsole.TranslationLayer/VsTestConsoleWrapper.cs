@@ -114,6 +114,11 @@ namespace Microsoft.TestPlatform.VsTestConsole.TranslationLayer
         /// <inheritdoc/>
         public void StartSession()
         {
+            if (EqtTrace.IsInfoEnabled)
+            {
+                EqtTrace.Info("VsTestConsoleWrapper.StartSession: Starting VsTestConsoleWrapper session.");
+            }
+
             this.testPlatformEventSource.TranslationLayerInitializeStart();
 
             // Start communication
@@ -140,6 +145,7 @@ namespace Microsoft.TestPlatform.VsTestConsole.TranslationLayer
         public void InitializeExtensions(IEnumerable<string> pathToAdditionalExtensions)
         {
             this.EnsureInitialized();
+
             this.pathToAdditionalExtensions = pathToAdditionalExtensions.ToList();
             this.requestSender.InitializeExtensions(this.pathToAdditionalExtensions);
         }
@@ -256,8 +262,14 @@ namespace Microsoft.TestPlatform.VsTestConsole.TranslationLayer
         /// <inheritdoc/>
         public void EndSession()
         {
+            EqtTrace.Info("VsTestConsoleWrapper.EndSession: Ending VsTestConsoleWrapper session");
+
             this.requestSender.EndSession();
             this.requestSender.Close();
+
+            // If vstest.console is still hanging around, it should be explicitly killed.
+            this.vstestConsoleProcessManager.ShutdownProcess();
+
             this.sessionStarted = false;
         }
 

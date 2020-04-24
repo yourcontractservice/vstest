@@ -111,7 +111,7 @@ VERSION=$(test -z $VERSION && grep TPVersionPrefix $TP_ROOT_DIR/scripts/build/Te
 export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
 # Dotnet build doesnt support --packages yet. See https://github.com/dotnet/cli/issues/2712
 export NUGET_PACKAGES=$TP_PACKAGES_DIR
-DOTNET_CLI_VERSION="LATEST"
+DOTNET_CLI_VERSION="3.1.101"
 #DOTNET_RUNTIME_VERSION="LATEST"
 
 #
@@ -189,12 +189,7 @@ function install_cli()
         $install_script --install-dir "$TP_TOOLS_DIR/dotnet" --no-path --channel "master" --version $DOTNET_CLI_VERSION
 
         # Get netcoreapp1.1 shared components
-        log "install_cli: Get the shared netcoreapp1.0 runtime..."
-        $install_script --install-dir "$TP_TOOLS_DIR/dotnet" --no-path --channel "preview" --version "1.0.5" --shared-runtime
-        log "install_cli: Get the shared netcoreapp1.1 runtime..."
-        $install_script --install-dir "$TP_TOOLS_DIR/dotnet" --no-path --channel "release/1.1.0" --version "1.1.2" --shared-runtime
-        log "install_cli: Get the shared netcoreapp2.0 runtime..."
-        $install_script --install-dir "$TP_TOOLS_DIR/dotnet" --no-path --channel "release/2.0.0" --version "2.0.0" --shared-runtime
+        $install_script --install-dir "$TP_TOOLS_DIR/dotnet" --no-path --channel "release/2.1.0" --version "2.1.0" --shared-runtime
         #log "install_cli: Get shared components which is compatible with dotnet cli version $DOTNET_CLI_VERSION..."
         #$install_script --install-dir "$TP_TOOLS_DIR/dotnet" --no-path --channel "master" --version $DOTNET_RUNTIME_VERSION --shared-runtime
     fi
@@ -314,7 +309,7 @@ function publish_package()
 
         # Note Note: If there are some dependencies for the logger assemblies, those need to be moved too. 
         # Ideally we should just be publishing the loggers to the Extensions folder.
-        loggers=("Microsoft.VisualStudio.TestPlatform.Extensions.Trx.TestLogger.dll" "Microsoft.VisualStudio.TestPlatform.Extensions.Trx.TestLogger.pdb")
+        loggers=("Microsoft.VisualStudio.TestPlatform.Extensions.Trx.TestLogger.dll" "Microsoft.VisualStudio.TestPlatform.Extensions.Trx.TestLogger.pdb" "Microsoft.VisualStudio.TestPlatform.Extensions.Html.TestLogger.dll" "Microsoft.VisualStudio.TestPlatform.Extensions.Html.TestLogger.pdb")
         for i in ${loggers[@]}; do
             mv $packageDir/${i} $extensionsDir
         done

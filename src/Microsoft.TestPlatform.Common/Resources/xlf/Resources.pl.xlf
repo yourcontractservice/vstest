@@ -260,7 +260,7 @@
         <note />
       </trans-unit>
       <trans-unit id="FastFilterException">
-        <source>An error occured while creating Fast filter.</source>
+        <source>An error occurred while creating Fast filter.</source>
         <target state="translated">Wystąpił błąd podczas tworzenia szybkiego filtru.</target>
         <note />
       </trans-unit>
@@ -268,6 +268,16 @@
         <source>Cancelling the operation as requested.</source>
         <target state="translated">Anulowanie operacji zgodnie z żądaniem.</target>
         <note />
+      </trans-unit>
+      <trans-unit id="UnableToFetchUriString">
+        <source>Unable to find a datacollector with friendly name '{0}'.</source>
+        <target state="translated">Nie można znaleźć elementu datacollector o przyjaznej nazwie „{0}”.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="FailedToLoadAdapaterFile">
+        <source>Failed to load extensions from file '{0}'. Please use /diag for more information.</source>
+        <target state="translated">Nie można załadować rozszerzeń z pliku „{0}”. Aby uzyskać więcej informacji, użyj opcji /diag.</target>
+        <note></note>
       </trans-unit>
     </body>
   </file>

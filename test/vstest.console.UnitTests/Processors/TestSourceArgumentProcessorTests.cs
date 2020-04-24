@@ -5,12 +5,13 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests.Processors
 {
     using System;
     using System.Linq;
-
+    using Microsoft.Extensions.FileSystemGlobbing;
     using Microsoft.VisualStudio.TestPlatform.CommandLine.Processors;
     using Microsoft.VisualStudio.TestPlatform.Utilities.Helpers.Interfaces;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     using Moq;
+    using vstest.console.Internal;
 
     // <summary>
     // Tests for TestSourceArgumentProcessor
@@ -48,12 +49,12 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests.Processors
             Assert.IsNull(capabilities.HelpContentResourceName);
 
             Assert.AreEqual(HelpContentPriority.None, capabilities.HelpPriority);
-            Assert.AreEqual(false, capabilities.IsAction);
+            Assert.IsFalse(capabilities.IsAction);
             Assert.AreEqual(ArgumentProcessorPriority.Normal, capabilities.Priority);
 
-            Assert.AreEqual(true, capabilities.AllowMultiple);
-            Assert.AreEqual(false, capabilities.AlwaysExecute);
-            Assert.AreEqual(true, capabilities.IsSpecialCommand);
+            Assert.IsTrue(capabilities.AllowMultiple);
+            Assert.IsFalse(capabilities.AlwaysExecute);
+            Assert.IsTrue(capabilities.IsSpecialCommand);
         }
 
         #endregion
@@ -78,7 +79,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests.Processors
             }
             catch (Exception ex)
             {
-                Assert.IsTrue(ex is CommandLineException);
+                Assert.IsTrue(ex is TestSourceException);
                 Assert.AreEqual("The test source file \"" + testFilePath + "\" provided was not found.", ex.Message);
             }
         }
@@ -94,6 +95,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests.Processors
             var options = CommandLineOptions.Instance;
             options.Reset();
             options.FileHelper = mockFileHelper.Object;
+            options.FilePatternParser = new FilePatternParser(new Mock<Matcher>().Object, mockFileHelper.Object);
             var executor = new TestSourceArgumentExecutor(options);
 
             executor.Initialize(testFilePath);

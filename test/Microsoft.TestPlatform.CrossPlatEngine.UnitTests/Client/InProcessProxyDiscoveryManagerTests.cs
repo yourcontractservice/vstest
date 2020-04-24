@@ -48,8 +48,7 @@ namespace TestPlatform.CrossPlatEngine.UnitTests.Client
         public void DiscoverTestsShouldCallInitialize()
         {
             var manualResetEvent = new ManualResetEvent(false);
-
-            this.mockDiscoveryManager.Setup(o => o.Initialize(Enumerable.Empty<string>())).Callback(
+            this.mockDiscoveryManager.Setup(o => o.Initialize(Enumerable.Empty<string>(), null)).Callback(
                 () => manualResetEvent.Set());
 
             var discoveryCriteria = new DiscoveryCriteria(new[] { "test.dll" }, 1, string.Empty);
@@ -62,7 +61,7 @@ namespace TestPlatform.CrossPlatEngine.UnitTests.Client
         public void DiscoverTestsShouldUpdateTestPluginCacheWithExtensionsReturnByTestHost()
         {
             var manualResetEvent = new ManualResetEvent(false);
-            this.mockDiscoveryManager.Setup(o => o.Initialize(Enumerable.Empty<string>())).Callback(
+            this.mockDiscoveryManager.Setup(o => o.Initialize(Enumerable.Empty<string>(), null)).Callback(
                 () => manualResetEvent.Set());
 
             this.mockTestHostManager.Setup(o => o.GetTestPlatformExtensions(It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>())).Returns(new List<string> { "C:\\DiscoveryDummy.dll" });
@@ -160,7 +159,7 @@ namespace TestPlatform.CrossPlatEngine.UnitTests.Client
 
             Assert.IsTrue(manualResetEvent.WaitOne(5000), "IDiscoveryManager.DiscoverTests should get called");
 
-            // AdapterSourceMap should contail updated testSources.
+            // AdapterSourceMap should contain updated testSources.
             Assert.AreEqual(actualSources.FirstOrDefault(), discoveryCriteria.AdapterSourceMap.FirstOrDefault().Value.FirstOrDefault());
             Assert.AreEqual(inputSource.FirstOrDefault(), discoveryCriteria.Package);
         }

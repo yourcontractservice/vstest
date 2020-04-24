@@ -7,11 +7,11 @@ namespace Microsoft.VisualStudio.TestPlatform.TestHost
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Globalization;
+    using System.Runtime.InteropServices;
     using Microsoft.VisualStudio.TestPlatform.CoreUtilities.Helpers;
     using Microsoft.VisualStudio.TestPlatform.CoreUtilities.Tracing;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel;
     using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions;
-    using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions.Interfaces;
     using Microsoft.VisualStudio.TestPlatform.Utilities;
 
     /// <summary>
@@ -36,7 +36,7 @@ namespace Microsoft.VisualStudio.TestPlatform.TestHost
             }
             catch (Exception ex)
             {
-                EqtTrace.Error("TestHost: Error occured during initialization of TestHost : {0}", ex);
+                EqtTrace.Error("TestHost: Error occurred during initialization of TestHost : {0}", ex);
 
                 // Throw exception so that vstest.console get the exception message.
                 throw;
@@ -54,7 +54,7 @@ namespace Microsoft.VisualStudio.TestPlatform.TestHost
             WaitForDebuggerIfEnabled();
             SetCultureSpecifiedByUser();
             var argsDictionary = CommandLineArgumentsHelper.GetArgumentsDictionary(args);
-            
+
             // Invoke the engine with arguments
             GetEngineInvoker(argsDictionary).Invoke(argsDictionary);
         }
@@ -63,7 +63,7 @@ namespace Microsoft.VisualStudio.TestPlatform.TestHost
         {
             IEngineInvoker invoker = null;
 #if NET451
-            // If Args contains test source argument, invoker Engine in new appdomain 
+            // If Args contains test source argument, invoker Engine in new appdomain
             string testSourcePath;
             if (argsDictionary.TryGetValue(TestSourceArgumentString, out testSourcePath) && !string.IsNullOrWhiteSpace(testSourcePath))
             {
@@ -84,24 +84,33 @@ namespace Microsoft.VisualStudio.TestPlatform.TestHost
 
         private static void WaitForDebuggerIfEnabled()
         {
-            IProcessHelper processHelper = new ProcessHelper();
-            var debugEnabled = Environment.GetEnvironmentVariable("VSTEST_HOST_DEBUG");
-            if (!string.IsNullOrEmpty(debugEnabled) && debugEnabled.Equals("1", StringComparison.Ordinal))
+            // Check if native debugging is enabled and OS is windows.
+            var nativeDebugEnabled = Environment.GetEnvironmentVariable("VSTEST_HOST_NATIVE_DEBUG");
+
+            if (!string.IsNullOrEmpty(nativeDebugEnabled) && nativeDebugEnabled.Equals("1", StringComparison.Ordinal)
+                && new PlatformEnvironment().OperatingSystem.Equals(PlatformOperatingSystem.Windows))
             {
-                ConsoleOutput.Instance.WriteLine("Waiting for debugger attach...", OutputLevel.Information);
-
-                var currentProcessId = processHelper.GetCurrentProcessId();
-                var currentProcessName = processHelper.GetProcessName(currentProcessId);
-                ConsoleOutput.Instance.WriteLine(
-                    string.Format("Process Id: {0}, Name: {1}", currentProcessId, currentProcessName),
-                    OutputLevel.Information);
-
-                while (!Debugger.IsAttached)
+                while (!IsDebuggerPresent())
                 {
                     System.Threading.Tasks.Task.Delay(1000).Wait();
                 }
 
-                Debugger.Break();
+                DebugBreak();
+            }
+            // else check for host debugging enabled
+            else
+            {
+                var debugEnabled = Environment.GetEnvironmentVariable("VSTEST_HOST_DEBUG");
+
+                if (!string.IsNullOrEmpty(debugEnabled) && debugEnabled.Equals("1", StringComparison.Ordinal))
+                {
+                    while (!Debugger.IsAttached)
+                    {
+                        System.Threading.Tasks.Task.Delay(1000).Wait();
+                    }
+
+                    Debugger.Break();
+                }
             }
         }
 
@@ -120,5 +129,13 @@ namespace Microsoft.VisualStudio.TestPlatform.TestHost
                 }
             }
         }
+
+        // Native APIs for enabling native debugging.
+        [DllImport("kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool IsDebuggerPresent();
+
+        [DllImport("kernel32.dll", SetLastError = true, CallingConvention = CallingConvention.Winapi)]
+        internal static extern void DebugBreak();
     }
 }

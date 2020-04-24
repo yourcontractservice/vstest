@@ -298,6 +298,11 @@ Fehlerdetails: {1}: {2}</target>
         <target state="translated">AVERTISSEMENT : Fichier de résultats en cours de remplacement : {0}</target>
         <note />
       </trans-unit>
+      <trans-unit id="PrefixAndNameProvidedError">
+        <source>The parameters LogFileName and LogFilePrefix cannot be used together. </source>
+        <target state="translated">Les paramètres LogFileName et LogFilePrefix ne peuvent pas être utilisés ensemble. </target>
+        <note></note>
+      </trans-unit>
     </body>
   </file>
 </xliff>

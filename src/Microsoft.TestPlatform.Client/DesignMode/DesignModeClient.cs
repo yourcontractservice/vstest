@@ -11,6 +11,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
     using System.Threading.Tasks;
 
     using Microsoft.VisualStudio.TestPlatform.Client.RequestHelper;
+    using Microsoft.VisualStudio.TestPlatform.Common.Logging;
     using Microsoft.VisualStudio.TestPlatform.Common.Utilities;
     using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities;
     using Microsoft.VisualStudio.TestPlatform.CommunicationUtilities.Interfaces;
@@ -41,6 +42,8 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
 
         protected Action<Message> onAckMessageReceived;
 
+        private TestSessionMessageLogger testSessionMessageLogger;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="DesignModeClient"/> class.
         /// </summary>
@@ -66,6 +69,8 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
             this.communicationManager = communicationManager;
             this.dataSerializer = dataSerializer;
             this.platformEnvironment = platformEnvironment;
+            this.testSessionMessageLogger = TestSessionMessageLogger.Instance;
+            this.testSessionMessageLogger.TestRunMessage += this.TestRunMessageHandler;
         }
 
         /// <summary>
@@ -171,7 +176,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
 
                         case MessageType.StartDiscovery:
                             {
-                                var discoveryPayload = this.dataSerializer.DeserializePayload<DiscoveryRequestPayload>(message); 
+                                var discoveryPayload = this.dataSerializer.DeserializePayload<DiscoveryRequestPayload>(message);
                                 this.StartDiscovery(discoveryPayload, testRequestManager);
                                 break;
                             }
@@ -309,6 +314,44 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.DesignMode
         {
             var payload = new TestMessagePayload { MessageLevel = level, Message = message };
             this.communicationManager.SendMessage(MessageType.TestMessage, payload);
+        }
+
+        /// <summary>
+        /// Sends the test session logger warning and error messages to IDE; 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        public void TestRunMessageHandler(object sender, TestRunMessageEventArgs e)
+        {
+            // save into trace log and send the message to the IDE
+            //
+            // there is a mismatch between log levels that VS uses and that TP
+            // uses. In VS you can choose Trace level which will enable Test platform
+            // logs on Verbose level. Below we report Errors and warnings always to the 
+            // IDE no matter what the level of VS logging is, but Info only when the Eqt trace 
+            // info level is enabled (so only when VS enables Trace logging)
+            switch (e.Level)
+            {
+                case TestMessageLevel.Error:
+                    EqtTrace.Error(e.Message);
+                    SendTestMessage(e.Level, e.Message);
+                    break;
+                case TestMessageLevel.Warning:
+                    EqtTrace.Warning(e.Message);
+                    SendTestMessage(e.Level, e.Message);
+                    break;
+
+                case TestMessageLevel.Informational:
+                    EqtTrace.Info(e.Message);
+
+                    if (EqtTrace.IsInfoEnabled)
+                        SendTestMessage(e.Level, e.Message);
+                    break;
+
+               
+                default:
+                    throw new NotSupportedException($"Test message level '{e.Level}' is not supported.");
+            }
         }
 
         private void StartTestRun(TestRunRequestPayload testRunPayload, ITestRequestManager testRequestManager, bool skipTestHostLaunch)

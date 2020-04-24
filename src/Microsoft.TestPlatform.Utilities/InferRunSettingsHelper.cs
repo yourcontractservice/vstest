@@ -36,6 +36,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Utilities
         private const string TargetFrameworkNodePath = @"/RunSettings/RunConfiguration/TargetFrameworkVersion";
         private const string ResultsDirectoryNodePath = @"/RunSettings/RunConfiguration/ResultsDirectory";
         private const string TargetDeviceNodePath = @"/RunSettings/RunConfiguration/TargetDevice";
+        private const string EnvironmentVariablesNodePath = @"/RunSettings/RunConfiguration/EnvironmentVariables";
         private const string multiTargettingForwardLink = @"http://go.microsoft.com/fwlink/?LinkID=236877&clcid=0x409";
 
         // To make things compatible for older runsettings
@@ -94,7 +95,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Utilities
                             "DisableAppDomain"
                         };
 
-                        // Find all invalid RunConfiguration Settings 
+                        // Find all invalid RunConfiguration Settings
                         runSettingsNavigator.MoveToFirstChild();
                         do
                         {
@@ -225,7 +226,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Utilities
         }
 
         /// <summary>
-        /// Validates the collectors in runsettings when an inlined testsettings is specified
+        /// Validates the collectors in runsettings when an in-lined testsettings is specified
         /// </summary>
         /// <param name="runsettings">RunSettings used for the run</param>
         /// <returns>True if an incompatible collector is found</returns>
@@ -237,10 +238,10 @@ namespace Microsoft.VisualStudio.TestPlatform.Utilities
                 return false;
             }
 
-            // Explicitly blocking usage of data collectors through modes runsettings and testsettings except 
+            // Explicitly blocking usage of data collectors through modes runsettings and testsettings except
             // for couple of scenarios where the IDE generates the collector settings in the runsettings file even when
             // it has an embedded testsettings file. Longterm runsettings will be the single run configuration source
-            // Inproc collectos are incompatible with testsettings
+            // In-proc collectors are incompatible with testsettings
             var inprocDataCollectionSettings = XmlRunSettingsUtilities.GetInProcDataCollectionRunSettings(runsettings);
             if (inprocDataCollectionSettings != null && inprocDataCollectionSettings.IsCollectionEnabled && inprocDataCollectionSettings.DataCollectorSettingsList != null)
             {
@@ -254,7 +255,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Utilities
                 }
             }
 
-            // TestSettings and collection is enabled in runsetttings.. the only allowed collectors are codecoverage and fakes
+            // TestSettings and collection is enabled in runsetttings.. the only allowed collectors are code coverage and fakes
             var datacollectionSettings = XmlRunSettingsUtilities.GetDataCollectionRunSettings(runsettings);
             if (datacollectionSettings != null && datacollectionSettings.IsCollectionEnabled && datacollectionSettings.DataCollectorSettingsList != null)
             {
@@ -335,7 +336,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Utilities
                     {
                         legacySettingsTelemetry.Add(LegacyElementsString, string.Join(", ", legacySettingElements));
                     }
-                    
+
                     var deploymentNode = runSettingsNavigator.SelectSingleNode(@"/RunSettings/LegacySettings/Deployment");
                     var deploymentAttributes = GetNodeAttributes(deploymentNode);
                     if (deploymentAttributes != null)
@@ -375,6 +376,50 @@ namespace Microsoft.VisualStudio.TestPlatform.Utilities
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Returns a dictionary of environment variables given in run settings
+        /// </summary>
+        /// <param name="runsettingsXml">The run settings xml string</param>
+        /// <returns>Environment Variables Dictionary</returns>
+        public static Dictionary<string, string> GetEnvironmentVariables(string runSettings)
+        {
+            Dictionary<string, string> environmentVariables = null;
+            try
+            {
+                using (var stream = new StringReader(runSettings))
+                using (var reader = XmlReader.Create(stream, XmlRunSettingsUtilities.ReaderSettings))
+                {
+                    var document = new XmlDocument();
+                    document.Load(reader);
+                    var runSettingsNavigator = document.CreateNavigator();
+
+                    var node = runSettingsNavigator.SelectSingleNode(EnvironmentVariablesNodePath);
+                    if (node == null)
+                    {
+                        return null;
+                    }
+
+                    environmentVariables = new Dictionary<string, string>();
+                    var childNodes = node.SelectChildren(XPathNodeType.Element);
+
+                    while (childNodes.MoveNext())
+                    {
+                        if (!environmentVariables.ContainsKey(childNodes.Current.Name))
+                        {
+                            environmentVariables.Add(childNodes.Current.Name, childNodes.Current?.Value);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                EqtTrace.Error("Error while trying to read environment variables settings. Message: {0}", ex.ToString());
+                return null;
+            }
+
+            return environmentVariables;
         }
 
         /// <summary>
@@ -441,7 +486,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Utilities
         }
 
         /// <summary>
-        /// Adds node under RunConfiguration setting. Noop if node is already present.
+        /// Adds node under RunConfiguration setting. No op if node is already present.
         /// </summary>
         private static void AddNodeIfNotPresent<T>(XmlDocument xmlDocument, string nodePath, string nodeName, T nodeValue, bool overwrite = false)
         {
@@ -649,7 +694,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Utilities
         }
 
         /// <summary>
-        /// Returns true if source settings are incomaptible with target settings.
+        /// Returns true if source settings are incompatible with target settings.
         /// </summary>
         private static bool IsSettingIncompatible(Architecture sourcePlatform,
             Architecture targetPlatform,

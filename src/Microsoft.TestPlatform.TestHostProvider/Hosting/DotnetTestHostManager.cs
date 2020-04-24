@@ -45,10 +45,9 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
         private const string DotnetTestHostUri = "HostProvider://DotnetTestHost";
         private const string DotnetTestHostFriendlyName = "DotnetTestHost";
         private const string TestAdapterRegexPattern = @"TestAdapter.dll";
-        private const string DataCollectorRegexPattern = @"Collector.dll";
 
         private IDotnetHostHelper dotnetHostHelper;
-
+        private IEnvironment platformEnvironment;
         private IProcessHelper processHelper;
 
         private IFileHelper fileHelper;
@@ -65,11 +64,17 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
 
         private string hostPackageVersion = "15.0.0";
 
+        private Architecture architecture;
+
+        private bool isVersionCheckRequired = true;
+
+        private string dotnetHostPath;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="DotnetTestHostManager"/> class.
         /// </summary>
         public DotnetTestHostManager()
-            : this(new ProcessHelper(), new FileHelper(), new DotnetHostHelper())
+            : this(new ProcessHelper(), new FileHelper(), new DotnetHostHelper(), new PlatformEnvironment())
         {
         }
 
@@ -79,14 +84,17 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
         /// <param name="processHelper">Process helper instance.</param>
         /// <param name="fileHelper">File helper instance.</param>
         /// <param name="dotnetHostHelper">DotnetHostHelper helper instance.</param>
+        /// <param name="platformEnvironment">Platform Environment</param>
         internal DotnetTestHostManager(
             IProcessHelper processHelper,
             IFileHelper fileHelper,
-            IDotnetHostHelper dotnetHostHelper)
+            IDotnetHostHelper dotnetHostHelper,
+            IEnvironment platformEnvironment)
         {
             this.processHelper = processHelper;
             this.fileHelper = fileHelper;
             this.dotnetHostHelper = dotnetHostHelper;
+            this.platformEnvironment = platformEnvironment;
         }
 
         /// <inheritdoc />
@@ -106,8 +114,20 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
 
         /// <summary>
         /// Gets a value indicating whether the test host supports protocol version check
+        /// By default this is set to true. For host package version 15.0.0, this will be set to false;
         /// </summary>
-        internal virtual bool IsVersionCheckRequired => !this.hostPackageVersion.StartsWith("15.0.0");
+        internal virtual bool IsVersionCheckRequired
+        {
+            get
+            {
+                return this.isVersionCheckRequired;
+            }
+
+            private set
+            {
+                this.isVersionCheckRequired = value;
+            }
+        }
 
         /// <summary>
         /// Gets a value indicating whether the test host supports protocol version check
@@ -135,6 +155,10 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
         {
             this.messageLogger = logger;
             this.hostExitedEventRaised = false;
+
+            var runConfiguration = XmlRunSettingsUtilities.GetRunConfigurationNode(runsettingsXml);
+            this.architecture = runConfiguration.TargetPlatform;
+            this.dotnetHostPath = runConfiguration.DotnetHostPath;
         }
 
         /// <inheritdoc/>
@@ -163,30 +187,13 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
         {
             var startInfo = new TestProcessStartInfo();
 
-            var currentProcessPath = this.processHelper.GetCurrentProcessFileName();
-
-            // This host manager can create process start info for dotnet core targets only.
-            // If already running with the dotnet executable, use it; otherwise pick up the dotnet available on path.
-            // Wrap the paths with quotes in case dotnet executable is installed on a path with whitespace.
-            if (currentProcessPath.EndsWith("dotnet", StringComparison.OrdinalIgnoreCase)
-                || currentProcessPath.EndsWith("dotnet.exe", StringComparison.OrdinalIgnoreCase))
-            {
-                startInfo.FileName = currentProcessPath;
-            }
-            else
-            {
-                startInfo.FileName = this.dotnetHostHelper.GetDotnetPath();
-            }
-
-            EqtTrace.Verbose("DotnetTestHostmanager: Full path of dotnet.exe is {0}", startInfo.FileName);
-
             // .NET core host manager is not a shared host. It will expect a single test source to be provided.
-            var args = "exec";
+            var args = string.Empty;
             var sourcePath = sources.Single();
             var sourceFile = Path.GetFileNameWithoutExtension(sourcePath);
             var sourceDirectory = Path.GetDirectoryName(sourcePath);
 
-            // Probe for runtimeconfig and deps file for the test source
+            // Probe for runtime config and deps file for the test source
             var runtimeConfigPath = Path.Combine(sourceDirectory, string.Concat(sourceFile, ".runtimeconfig.json"));
             if (this.fileHelper.Exists(runtimeConfigPath))
             {
@@ -196,7 +203,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
             }
             else
             {
-                EqtTrace.Verbose("DotnetTestHostmanager: File {0}, doesnot exist", runtimeConfigPath);
+                EqtTrace.Verbose("DotnetTestHostmanager: File {0}, does not exist", runtimeConfigPath);
             }
 
             // Use the deps.json for test source
@@ -209,14 +216,88 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
             }
             else
             {
-                EqtTrace.Verbose("DotnetTestHostmanager: File {0}, doesnot exist", depsFilePath);
+                EqtTrace.Verbose("DotnetTestHostmanager: File {0}, does not exist", depsFilePath);
             }
 
             var runtimeConfigDevPath = Path.Combine(sourceDirectory, string.Concat(sourceFile, ".runtimeconfig.dev.json"));
-            var testHostPath = this.GetTestHostPath(runtimeConfigDevPath, depsFilePath, sourceDirectory);
+            string testHostPath = string.Empty;
+            bool useCustomDotnetHostpath = !string.IsNullOrEmpty(this.dotnetHostPath);
 
-            EqtTrace.Verbose("DotnetTestHostmanager: Full path of testhost.dll is {0}", testHostPath);
-            args += " " + testHostPath.AddDoubleQuote() + " " + connectionInfo.ToCommandLineOptions();
+            if (useCustomDotnetHostpath)
+            {
+                EqtTrace.Verbose("DotnetTestHostmanager: User specified custom path to dotnet host: '{0}'.", this.dotnetHostPath);
+            }
+
+            // If testhost.exe is available use it, unless user specified path to dotnet.exe, then we will use the testhost.dll
+            bool testHostExeFound = false;
+            if (!useCustomDotnetHostpath && this.platformEnvironment.OperatingSystem.Equals(PlatformOperatingSystem.Windows))
+            {
+                var exeName = this.architecture == Architecture.X86 ? "testhost.x86.exe" : "testhost.exe";
+                var fullExePath = Path.Combine(sourceDirectory, exeName);
+
+                // check for testhost.exe in sourceDirectory. If not found, check in nuget folder.
+                if (this.fileHelper.Exists(fullExePath))
+                {
+                    EqtTrace.Verbose("DotnetTestHostManager: Testhost.exe/testhost.x86.exe found at path: " + fullExePath);
+                    startInfo.FileName = fullExePath;
+                    testHostExeFound = true;
+                }
+                else
+                {
+                    // Check if testhost.dll is found in nuget folder.
+                    testHostPath = this.GetTestHostPath(runtimeConfigDevPath, depsFilePath, sourceDirectory);
+                    if (testHostPath.IndexOf("microsoft.testplatform.testhost", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        // testhost.dll is present in path {testHostNugetRoot}\lib\netcoreapp2.1\testhost.dll
+                        // testhost.(x86).exe is present in location {testHostNugetRoot}\build\netcoreapp2.1\{x86/x64}\{testhost.x86.exe/testhost.exe}
+                        var folderName = this.architecture == Architecture.X86 ? "x86" : "x64";
+                        var testHostNugetRoot = new DirectoryInfo(testHostPath).Parent.Parent.Parent;
+                        var testHostExeNugetPath = Path.Combine(testHostNugetRoot.FullName, "build", "netcoreapp2.1", folderName, exeName);
+
+                        if (this.fileHelper.Exists(testHostExeNugetPath))
+                        {
+                            EqtTrace.Verbose("DotnetTestHostManager: Testhost.exe/testhost.x86.exe found at path: " + testHostExeNugetPath);
+                            startInfo.FileName = testHostExeNugetPath;
+                            testHostExeFound = true;
+                        }
+                    }
+                }
+            }
+
+            if (!testHostExeFound)
+            {
+                if (string.IsNullOrEmpty(testHostPath))
+                {
+                    testHostPath = this.GetTestHostPath(runtimeConfigDevPath, depsFilePath, sourceDirectory);
+                }
+
+                var currentProcessPath = this.processHelper.GetCurrentProcessFileName();
+                if (useCustomDotnetHostpath)
+                {
+                    startInfo.FileName = this.dotnetHostPath;
+                }
+
+                // This host manager can create process start info for dotnet core targets only.
+                // If already running with the dotnet executable, use it; otherwise pick up the dotnet available on path.
+                // Wrap the paths with quotes in case dotnet executable is installed on a path with whitespace.
+                else if (currentProcessPath.EndsWith("dotnet", StringComparison.OrdinalIgnoreCase)
+                   || currentProcessPath.EndsWith("dotnet.exe", StringComparison.OrdinalIgnoreCase))
+                {
+                    startInfo.FileName = currentProcessPath;
+                }
+                else
+                {
+                    startInfo.FileName = this.dotnetHostHelper.GetDotnetPath();
+                }
+
+                EqtTrace.Verbose("DotnetTestHostmanager: Full path of testhost.dll is {0}", testHostPath);
+                args = "exec" + args;
+                args += " " + testHostPath.AddDoubleQuote();
+            }
+
+            EqtTrace.Verbose("DotnetTestHostmanager: Full path of host exe is {0}", startInfo.FileName);
+
+            args += " " + connectionInfo.ToCommandLineOptions();
 
             // Create a additional probing path args with Nuget.Client
             // args += "--additionalprobingpath xxx"
@@ -247,18 +328,13 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
                 extensionPaths.AddRange(this.fileHelper.EnumerateFiles(sourceDirectory, SearchOption.TopDirectoryOnly, TestAdapterRegexPattern));
             }
 
-            if (extensions != null && extensions.Any())
-            {
-                extensionPaths.AddRange(extensions.Where(x => x.EndsWith(DataCollectorRegexPattern, StringComparison.OrdinalIgnoreCase)));
-            }
-
             return extensionPaths;
         }
 
         /// <inheritdoc/>
         public IEnumerable<string> GetTestSources(IEnumerable<string> sources)
         {
-            // We do not have scenario where netcore tests are deployed to remote machine, so no need to udpate sources
+            // We do not have scenario where netcore tests are deployed to remote machine, so no need to update sources
             return sources;
         }
 
@@ -298,7 +374,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
         /// <summary>
         /// Raises HostLaunched event
         /// </summary>
-        /// <param name="e">hostprovider event args</param>
+        /// <param name="e">host provider event args</param>
         private void OnHostLaunched(HostProviderEventArgs e)
         {
             this.HostLaunched.SafeInvoke(this, e, "HostProviderEvents.OnHostLaunched");
@@ -307,13 +383,18 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
         /// <summary>
         /// Raises HostExited event
         /// </summary>
-        /// <param name="e">hostprovider event args</param>
+        /// <param name="e">host provider event args</param>
         private void OnHostExited(HostProviderEventArgs e)
         {
             if (!this.hostExitedEventRaised)
             {
                 this.hostExitedEventRaised = true;
+                EqtTrace.Verbose("DotnetTestHostManager.OnHostExited: invoking OnHostExited callback");
                 this.HostExited.SafeInvoke(this, e, "HostProviderEvents.OnHostExited");
+            }
+            else
+            {
+                EqtTrace.Verbose("DotnetTestHostManager.OnHostExited: exit event was already raised, skipping");
             }
         }
 
@@ -325,7 +406,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
                 EqtTrace.Verbose("DotnetTestHostManager: Starting process '{0}' with command line '{1}'", testHostStartInfo.FileName, testHostStartInfo.Arguments);
 
                 cancellationToken.ThrowIfCancellationRequested();
-                this.testHostProcess = this.processHelper.LaunchProcess(testHostStartInfo.FileName, testHostStartInfo.Arguments, testHostStartInfo.WorkingDirectory, testHostStartInfo.EnvironmentVariables, this.ErrorReceivedCallback, this.ExitCallBack) as Process;
+                this.testHostProcess = this.processHelper.LaunchProcess(testHostStartInfo.FileName, testHostStartInfo.Arguments, testHostStartInfo.WorkingDirectory, testHostStartInfo.EnvironmentVariables, this.ErrorReceivedCallback, this.ExitCallBack, null) as Process;
             }
             else
             {
@@ -373,6 +454,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
 
                             testHostPath = Path.Combine(testhostPackage.Path, testHostPath);
                             this.hostPackageVersion = testhostPackage.Version;
+                            this.IsVersionCheckRequired = !this.hostPackageVersion.StartsWith("15.0.0");
                             EqtTrace.Verbose("DotnetTestHostmanager: Relative path of testhost.dll with respect to package folder is {0}", testHostPath);
                         }
                     }
@@ -412,7 +494,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
                 errorMessage = string.Format(CultureInfo.CurrentCulture, Resources.UnableToFindDepsFile, depsFilePath);
             }
 
-            // If we are here it means it couldnt resolve testhost.dll from nuget cache.
+            // If we are here it means it couldn't resolve testhost.dll from nuget cache.
             // Try resolving testhost from output directory of test project. This is required if user has published the test project
             // and is running tests in an isolated machine. A second scenario is self test: test platform unit tests take a project
             // dependency on testhost (instead of nuget dependency), this drops testhost to output path.
@@ -421,7 +503,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Hosting
 
             if (!this.fileHelper.Exists(testHostPath))
             {
-                // If deps file is not found, suggest adding Microsoft.Net.Test.Sdk reference to the project
+                // If dependency file is not found, suggest adding Microsoft.Net.Test.Sdk reference to the project
                 // Otherwise, suggest publishing the test project so that test host gets dropped next to the test source.
                 errorMessage = errorMessage ?? string.Format(CultureInfo.CurrentCulture, Resources.SuggestPublishTestProject, testHostPath);
                 throw new TestPlatformException(errorMessage);

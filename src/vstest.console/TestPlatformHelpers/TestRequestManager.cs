@@ -29,6 +29,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers
     using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client.Interfaces;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel.Utilities;
     using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions;
+    using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions.Interfaces;
     using Microsoft.VisualStudio.TestPlatform.Utilities;
 
     /// <summary>
@@ -47,6 +48,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers
         private readonly object syncObject = new object();
         private readonly Task<IMetricsPublisher> metricsPublisher;
         private bool isDisposed;
+        private IProcessHelper processHelper;
 
         /// <summary>
         /// Maintains the current active execution request
@@ -69,11 +71,12 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers
                   TestRunResultAggregator.Instance,
                   TestPlatformEventSource.Instance,
                   new InferHelper(AssemblyMetadataProvider.Instance),
-                  MetricsPublisherFactory.GetMetricsPublisher(IsTelemetryOptedIn(), CommandLineOptions.Instance.IsDesignMode))
+                  MetricsPublisherFactory.GetMetricsPublisher(IsTelemetryOptedIn(), CommandLineOptions.Instance.IsDesignMode),
+                  new ProcessHelper())
         {
         }
 
-        internal TestRequestManager(CommandLineOptions commandLineOptions, ITestPlatform testPlatform, TestRunResultAggregator testRunResultAggregator, ITestPlatformEventSource testPlatformEventSource, InferHelper inferHelper, Task<IMetricsPublisher> metricsPublisher)
+        internal TestRequestManager(CommandLineOptions commandLineOptions, ITestPlatform testPlatform, TestRunResultAggregator testRunResultAggregator, ITestPlatformEventSource testPlatformEventSource, InferHelper inferHelper, Task<IMetricsPublisher> metricsPublisher, IProcessHelper processHelper)
         {
             this.testPlatform = testPlatform;
             this.commandLineOptions = commandLineOptions;
@@ -81,6 +84,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers
             this.testPlatformEventSource = testPlatformEventSource;
             this.inferHelper = inferHelper;
             this.metricsPublisher = metricsPublisher;
+            this.processHelper = processHelper;
         }
 
         #endregion
@@ -146,6 +150,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers
 
             var runConfiguration = XmlRunSettingsUtilities.GetRunConfigurationNode(runsettings);
             var batchSize = runConfiguration.BatchSize;
+            var testCaseFilterFromRunsettings = runConfiguration.TestCaseFilter;
 
             if (requestData.IsTelemetryOptedIn)
             {
@@ -156,10 +161,12 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers
                 this.LogCommandsTelemetryPoints(requestData);
             }
 
+            
+
             // create discovery request
             var criteria = new DiscoveryCriteria(discoveryPayload.Sources, batchSize, this.commandLineOptions.TestStatsEventTimeout, runsettings)
             {
-                TestCaseFilter = this.commandLineOptions.TestCaseFilterValue
+                TestCaseFilter = this.commandLineOptions.TestCaseFilterValue ?? testCaseFilterFromRunsettings
             };
 
             // Make sure to run the run request inside a lock as the below section is not thread-safe
@@ -297,7 +304,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers
         private void LogTelemetryForLegacySettings(IRequestData requestData, string runsettings)
         {
             requestData.MetricsCollection.Add(TelemetryDataConstants.TestSettingsUsed, InferRunSettingsHelper.IsTestSettingsEnabled(runsettings));
-            
+
             if (InferRunSettingsHelper.TryGetLegacySettingElements(runsettings, out Dictionary<string, string> legacySettingsTelemetry))
             {
                 foreach( var ciData in legacySettingsTelemetry)
@@ -379,7 +386,19 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers
                     var loggerRunSettings = XmlRunSettingsUtilities.GetLoggerRunSettings(runsettingsXml) ?? new LoggerRunSettings();
 
                     settingsUpdated |= this.UpdateFramework(document, navigator, sources, sourceFrameworks, registrar, out Framework chosenFramework);
-                    settingsUpdated |= this.UpdatePlatform(document, navigator, sources, sourcePlatforms, out Architecture chosenPlatform);
+
+                    // Choose default architecture based on the framework
+                    // For .NET core, the default platform architecture should be based on the process.
+                    // For a 64 bit process,
+                    Architecture defaultArchitecture = Architecture.X86;
+                    if (chosenFramework.Name.IndexOf("netstandard", StringComparison.OrdinalIgnoreCase) >= 0
+                    || chosenFramework.Name.IndexOf("netcoreapp", StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        var currentProcessName = this.processHelper.GetProcessName(this.processHelper.GetCurrentProcessId());
+                        defaultArchitecture = (currentProcessName.StartsWith("dotnet", StringComparison.OrdinalIgnoreCase) && !Environment.Is64BitProcess) ? Architecture.X86: Architecture.X64;
+                    }
+
+                    settingsUpdated |= this.UpdatePlatform(document, navigator, sources, sourcePlatforms, defaultArchitecture, out Architecture chosenPlatform);
                     this.CheckSourcesForCompatibility(chosenFramework, chosenPlatform, sourcePlatforms, sourceFrameworks, registrar);
                     settingsUpdated |= this.UpdateDesignMode(document, runConfiguration);
                     settingsUpdated |= this.UpdateCollectSourceInformation(document, runConfiguration);
@@ -460,15 +479,15 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers
             }
         }
 
-        private bool UpdatePlatform(XmlDocument document, XPathNavigator navigator, List<string> sources, IDictionary<string, Architecture> sourcePlatforms, out Architecture chosenPlatform)
+        private bool UpdatePlatform(XmlDocument document, XPathNavigator navigator, List<string> sources, IDictionary<string, Architecture> sourcePlatforms, Architecture defaultArchitecture, out Architecture chosenPlatform)
         {
             // Get platform from sources
-            var inferedPlatform = inferHelper.AutoDetectArchitecture(sources, sourcePlatforms);
+            var inferedPlatform = inferHelper.AutoDetectArchitecture(sources, sourcePlatforms, defaultArchitecture);
 
             // Get platform from runsettings
             bool updatePlatform = IsAutoPlatformDetectRequired(navigator, out chosenPlatform);
 
-            // Update platform if required. For commandline scenario update happens in ArgumentProcessor.
+            // Update platform if required. For command line scenario update happens in ArgumentProcessor.
             if (updatePlatform)
             {
                 InferRunSettingsHelper.UpdateTargetPlatform(document, inferedPlatform.ToString(), overwrite: true);
@@ -486,7 +505,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers
             // Get framework from runsettings.
             bool updateFramework = IsAutoFrameworkDetectRequired(navigator, out chosenFramework);
 
-            // Update framework if required. For commandline scenario update happens in ArgumentProcessor.
+            // Update framework if required. For command line scenario update happens in ArgumentProcessor.
             if (updateFramework)
             {
                 InferRunSettingsHelper.UpdateTargetFramework(document, inferedFramework?.ToString(), overwrite: true);
@@ -555,7 +574,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers
         private void RunTests(IRequestData requestData, TestRunCriteria testRunCriteria, ITestRunEventsRegistrar testRunEventsRegistrar, TestPlatformOptions options)
         {
             // Make sure to run the run request inside a lock as the below section is not thread-safe
-            // TranslationLayer can process faster as it directly gets the raw unserialized messages whereas 
+            // TranslationLayer can process faster as it directly gets the raw un-serialized messages whereas 
             // below logic needs to deserialize and do some cleanup
             // While this section is cleaning up, TranslationLayer can trigger run causing multiple threads to run the below section at the same time
             lock (this.syncObject)
@@ -652,10 +671,10 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers
             // Collecting Target Platform.
             requestData.MetricsCollection.Add(TelemetryDataConstants.TargetPlatform, runConfiguration.TargetPlatform.ToString());
 
-            // Collecting Max Cpu count.
+            // Collecting Max CPU count.
             requestData.MetricsCollection.Add(TelemetryDataConstants.MaxCPUcount, runConfiguration.MaxCpuCount);
 
-            // Collecting Target Device. Here, it will be updated run settings so, target device will be under runconfiguration only.
+            // Collecting Target Device. Here, it will be updated run settings so, target device will be under run configuration only.
             var targetDevice = runConfiguration.TargetDevice;
             if (string.IsNullOrEmpty(targetDevice))
             {
@@ -683,7 +702,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers
         }
 
         /// <summary>
-        /// Checks whether Telemetry opted in or not. 
+        /// Checks whether Telemetry opted in or not.
         /// By Default opting out
         /// </summary>
         /// <returns>Returns Telemetry Opted out or not</returns>

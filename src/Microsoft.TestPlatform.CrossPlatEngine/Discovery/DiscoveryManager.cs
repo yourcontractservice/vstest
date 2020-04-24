@@ -63,10 +63,10 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Discovery
         /// Initializes the discovery manager.
         /// </summary>
         /// <param name="pathToAdditionalExtensions"> The path to additional extensions. </param>
-        public void Initialize(IEnumerable<string> pathToAdditionalExtensions)
+        public void Initialize(IEnumerable<string> pathToAdditionalExtensions, ITestDiscoveryEventsHandler2 eventHandler)
         {
             this.testPlatformEventSource.AdapterSearchStart();
-
+            this.testDiscoveryEventsHandler = eventHandler;
             if (pathToAdditionalExtensions != null && pathToAdditionalExtensions.Any())
             {
                 // Start using these additional extensions
@@ -97,7 +97,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Discovery
                 this.testDiscoveryEventsHandler = eventHandler;
                 var verifiedExtensionSourceMap = new Dictionary<string, IEnumerable<string>>();
 
-                // Validate the sources 
+                // Validate the sources
                 foreach (var kvp in discoveryCriteria.AdapterSourceMap)
                 {
                     var verifiedSources = GetValidSources(kvp.Value, this.sessionMessageLogger);
@@ -106,6 +106,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Discovery
                         verifiedExtensionSourceMap.Add(kvp.Key, kvp.Value);
                     }
                 }
+
 
                 // If there are sources to discover
                 if (verifiedExtensionSourceMap.Any())
@@ -214,7 +215,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Discovery
                 }
             }
 
-            // No valid source is found => we cannot discover. 
+            // No valid source is found => we cannot discover.
             if (!verifiedSources.Any())
             {
                 var sourcesString = string.Join(",", sources.ToArray());

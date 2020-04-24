@@ -20,15 +20,6 @@
       </count-group>
     </header>
     <body>
-      <trans-unit id="DuplicateSource">
-        <source>Duplicate source {0} specified.</source>
-        <target state="translated">Source dupliquée {0} spécifiée.</target>
-        <note />
-        <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
-          <target state-qualifier="mt-suggestion">Doppelte Quelle {0} angegeben.</target>
-        </alt-trans>
-        <note from="bb-metadata">fuzzyMatch="15" wordcount="4" adjWordcount="3.4" curWordcount="3.4"</note>
-      </trans-unit>
       <trans-unit id="FileNotFound">
         <source>'{0}' not found.</source>
         <target state="translated">'{0}' introuvable.</target>
@@ -230,7 +221,7 @@
       fichier de résultats des tests Visual Studio (TRX), utilisez /logger:trx[;LogFileName=&lt;nom de fichier unique par défaut&gt;]
       Crée un fichier dans le répertoire TestResults avec le LogFileName indiqué.
 
-      Change le niveau de détail des messages du journaliseur de la console, comme indiqué ci-dessous
+      Change le niveau de verbosité des messages du journaliseur de la console, comme indiqué ci-dessous
       Exemple : /logger:console;verbosity=&lt;"normal" par défaut&gt;
       Valeurs autorisées pour verbosity : quiet, minimal, normal et detailed.
 
@@ -299,16 +290,18 @@
       </trans-unit>
       <trans-unit id="RunTestsArgumentHelp">
         <source>[TestFileNames]
-      Run tests from the specified files. Separate multiple test file names
-      by spaces.
+      Run tests from the specified files or wild card pattern. Separate multiple test file names or pattern
+      by spaces. Set console logger verbosity to detailed to view matched test files.
       Examples: mytestproject.dll
-                mytestproject.dll myothertestproject.exe</source>
+                mytestproject.dll myothertestproject.exe
+                testproject*.dll my*project.dll</source>
         <target state="translated">[TestFileNames]
-      Exécutez les tests à partir des fichiers spécifiés. Séparez plusieurs noms de fichiers de test
-      par des espaces.
+      Exécutez des tests à partir des fichiers ou des modèles de caractères génériques spécifiés. Séparez plusieurs modèles ou noms de fichiers de test
+      par des espaces. Affectez à la verbosité du journaliseur de console la valeur Detailed pour voir les fichiers de test correspondants.
       Exemples : mytestproject.dll
-                mytestproject.dll myothertestproject.exe</target>
-        <note />
+                mytestproject.dll myothertestproject.exe
+                testproject*.dll my*project.dll</target>
+        <note></note>
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">[TestFileNames]
       Führen Sie Tests aus den angegebenen Dateien. Trennen Sie mehrere Test-Dateinamen
@@ -1584,7 +1577,7 @@
       fichier de résultats des tests Visual Studio (TRX), utilisez /logger:trx[;LogFileName=&lt;nom de fichier unique par défaut&gt;]
       Crée un fichier dans le répertoire TestResults avec le LogFileName indiqué.
 
-      Change le niveau de détail des messages du journaliseur de la console, comme indiqué ci-dessous
+      Change le niveau de verbosité des messages du journaliseur de la console, comme indiqué ci-dessous
       Exemple : /logger:console;verbosity=&lt;"minimal" par défaut&gt;
       Valeurs autorisées pour verbosity : quiet, minimal, normal et detailed.
 
@@ -1651,6 +1644,23 @@
       <trans-unit id="TestRunSummarySkippedTests">
         <source>    Skipped: {0}</source>
         <target state="translated">    Ignoré(s) : {0}</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="InvalidArgument">
+        <source>The argument {0} is invalid. Please use the /help option to check the list of valid arguments.</source>
+        <target state="translated">L’argument {0} n'est pas valide. Utilisez l'option /help pour vérifier la liste des arguments valides.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="TestSourcesDiscovered">
+        <source>A total of {0} test files matched the specified pattern.</source>
+        <target state="translated">Au total, {0} fichiers de test ont correspondu au modèle spécifié.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="InvalidTestRunParameterArgument">
+        <source>The test run parameter argument '{0}' is invalid. Please use the format below.
+     Format: TestRunParameters.Parameter(name=\"&lt;name&gt;\", value=\"&lt;value&gt;\")</source>
+        <target state="translated">L'argument de paramètre de série de tests '{0}' est non valide. Utilisez le format ci-dessous.
+     Format : TestRunParameters.Parameter(name=\"&lt;name&gt;\", value=\"&lt;value&gt;\")</target>
         <note></note>
       </trans-unit>
     </body>

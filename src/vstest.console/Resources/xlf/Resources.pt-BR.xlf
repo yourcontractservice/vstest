@@ -20,15 +20,6 @@
       </count-group>
     </header>
     <body>
-      <trans-unit id="DuplicateSource">
-        <source>Duplicate source {0} specified.</source>
-        <target state="translated">Fonte duplicada {0} especificada.</target>
-        <note />
-        <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
-          <target state-qualifier="mt-suggestion">Doppelte Quelle {0} angegeben.</target>
-        </alt-trans>
-        <note from="bb-metadata">fuzzyMatch="15" wordcount="4" adjWordcount="3.4" curWordcount="3.4"</note>
-      </trans-unit>
       <trans-unit id="FileNotFound">
         <source>'{0}' not found.</source>
         <target state="translated">'{0}' não encontrado.</target>
@@ -230,9 +221,9 @@
       Visual Studio use /logger:trx[;LogFileName=&lt;Defaults to unique file name&gt;]
       Cria um arquivo no diretório TestResults com o LogFileName determinado.
 
-      Altere o nível de detalhes nas mensagens de log do agente de console, como mostrado abaixo
+      Altere o nível de detalhamento nas mensagens de log do agente de console, como mostrado abaixo
       Exemplo: /logger:console;verbosity=&lt;Defaults to "normal"&gt;
-      Os valores permitidos para o nível de detalhes são: quiet, minimal, normal e detailed.
+      Os valores permitidos para o nível de detalhamento são: quiet, minimal, normal e detailed.
 
 Altere o prefixo de nível de diagnóstico do agente de console, como mostrado abaixo
       Exemplo: /logger:console;prefix=&lt;Defaults to "false"&gt;
@@ -299,16 +290,18 @@ Altere o prefixo de nível de diagnóstico do agente de console, como mostrado a
       </trans-unit>
       <trans-unit id="RunTestsArgumentHelp">
         <source>[TestFileNames]
-      Run tests from the specified files. Separate multiple test file names
-      by spaces.
+      Run tests from the specified files or wild card pattern. Separate multiple test file names or pattern
+      by spaces. Set console logger verbosity to detailed to view matched test files.
       Examples: mytestproject.dll
-                mytestproject.dll myothertestproject.exe</source>
+                mytestproject.dll myothertestproject.exe
+                testproject*.dll my*project.dll</source>
         <target state="translated">[TestFileNames]
-      Executar testes dos arquivos especificados. Use espaços para separar vários nomes 
-      de arquivo de teste.
+      Execute testes por meio dos arquivos especificados ou do padrão curinga. Separe vários nomes de arquivos de teste ou padrões
+      por espaços. Defina o detalhamento do agente do console como detalhado para exibir os arquivos de teste correspondentes.
       Exemplos: mytestproject.dll
-                mytestproject.dll myothertestproject.exe</target>
-        <note />
+                mytestproject.dll myothertestproject.exe
+                testproject*.dll my*project.dll</target>
+        <note></note>
         <alt-trans match-quality="100%" tool="BlackBox/MSR MT">
           <target state-qualifier="mt-suggestion">[TestFileNames]
       Führen Sie Tests aus den angegebenen Dateien. Trennen Sie mehrere Test-Dateinamen
@@ -1584,9 +1577,9 @@ Alterar o nível de rastreamento dos logs, como mostrado abaixo
       Visual Studio use /logger:trx[;LogFileName=&lt;Defaults to unique file name&gt;]
       Cria um arquivo no diretório TestResults com o LogFileName determinado.
 
-      Altere o nível de detalhes nas mensagens de log do agente de console, como mostrado abaixo
+      Altere o nível de detalhamento nas mensagens de log do agente de console, como mostrado abaixo
       Exemplo: /logger:console;verbosity=&lt;Defaults to "minimal"&gt;
-      Os valores permitidos para o nível de detalhes são: quiet, minimal, normal e detailed.
+      Os valores permitidos para o nível de detalhamento são: quiet, minimal, normal e detailed.
 
 Altere o prefixo de nível de diagnóstico do agente de console, como mostrado abaixo
       Exemplo: /logger:console;prefix=&lt;Defaults to "false"&gt;
@@ -1651,6 +1644,23 @@ Altere o prefixo de nível de diagnóstico do agente de console, como mostrado a
       <trans-unit id="TestRunSummarySkippedTests">
         <source>    Skipped: {0}</source>
         <target state="translated">    Ignorados: {0}</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="InvalidArgument">
+        <source>The argument {0} is invalid. Please use the /help option to check the list of valid arguments.</source>
+        <target state="translated">O argumento {0} é inválido. Use a opção /help para verificar a lista de argumentos válidos.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="TestSourcesDiscovered">
+        <source>A total of {0} test files matched the specified pattern.</source>
+        <target state="translated">{0} arquivos de teste no total corresponderam ao padrão especificado.</target>
+        <note></note>
+      </trans-unit>
+      <trans-unit id="InvalidTestRunParameterArgument">
+        <source>The test run parameter argument '{0}' is invalid. Please use the format below.
+     Format: TestRunParameters.Parameter(name=\"&lt;name&gt;\", value=\"&lt;value&gt;\")</source>
+        <target state="translated">O argumento do parâmetro de execução de teste '{0}' é inválido. Use o formato abaixo.
+     Formato: TestRunParameters.Parameter(name=\"&lt;name&gt;\", value=\"&lt;value&gt;\")</target>
         <note></note>
       </trans-unit>
     </body>

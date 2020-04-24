@@ -121,6 +121,9 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
 
         public const string DataCollectorSettingName = "DataCollector";
 
+        /// <summary>
+        /// Pattern used to find test run parameter node.
+        /// </summary>
         public const string TestRunParametersName = "TestRunParameters";
 
         /// <summary>
@@ -185,7 +188,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
 #endif
 
         /// <summary>
-        ///  Contants for detecting .net framework.
+        ///  Constants for detecting .net framework.
         /// </summary>
         public const string TargetFrameworkAttributeFullName = "System.Runtime.Versioning.TargetFrameworkAttribute";
 
@@ -203,7 +206,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
 
         public const string DotNetFrameworkCore10 = ".NETCoreApp,Version=v1.0";
 
-        public const string DotNetFrameworkUap10 = "Uap,Version=v10.0";
+        public const string DotNetFrameworkUap10 = "UAP,Version=v10.0";
 
         public const string TargetFrameworkName = "TargetFrameworkName";
     }
@@ -213,9 +216,12 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel
     /// </summary>
     public static class DefaultLoggerParameterNames
     {
-        // Denotes target location for test run resutls
+        // Denotes target location for test run results
         // For ex. TrxLogger saves test run results at this target
         public const string TestRunDirectory = "TestRunDirectory";
+
+        // Denotes target framework for the tests.
+        public const string TargetFramework = "TargetFramework";
     }
 
 }

@@ -21,7 +21,6 @@ namespace Microsoft.TestPlatform.TestUtilities
 
         private static Dictionary<string, string> dependencyVersions;
 
-        private readonly bool runningInCli;
         private string targetRuntime;
 
         public IntegrationTestEnvironment()
@@ -40,15 +39,8 @@ namespace Microsoft.TestPlatform.TestUtilities
             if (string.IsNullOrEmpty(TestPlatformRootDirectory))
             {
                 // Running in VS/IDE. Use artifacts directory as root.
-                this.runningInCli = false;
-
                 // Get root directory from test assembly output directory
                 TestPlatformRootDirectory = Path.GetFullPath(@"..\..\..\..\..");
-            }
-            else
-            {
-                // Running in command line/CI
-                this.runningInCli = true;
             }
 
             this.TestAssetsPath = Path.Combine(TestPlatformRootDirectory, @"test\TestAssets");
@@ -57,6 +49,7 @@ namespace Microsoft.TestPlatform.TestUtilities
             // Need to remove this assumption when we move to a CDP.
             this.PackageDirectory = Path.Combine(TestPlatformRootDirectory, @"packages");
             this.ToolsDirectory = Path.Combine(TestPlatformRootDirectory, @"tools");
+            this.TestArtifactsDirectory = Path.Combine(TestPlatformRootDirectory, "artifacts", "testArtifacts");
             this.RunnerFramework = "net451";
         }
 
@@ -104,27 +97,23 @@ namespace Microsoft.TestPlatform.TestUtilities
         {
             get
             {
-                string value = string.Empty;
-                if (this.runningInCli)
-                {
-                    value = Path.Combine(
-                        TestPlatformRootDirectory,
-                        "artifacts",
-                        BuildConfiguration,
-                        this.RunnerFramework,
-                        this.TargetRuntime);
-                }
-                else
-                {
-                    value = Path.Combine(
+               
+                // this used to switch to src\package\package\bin\based on whether 
+                // this is running in cli, but that's a bad idea, the console there does not have 
+                // a runtime config and will fail to start with error testhostpolicy.dll not found
+                var publishDirectory = Path.Combine(
                     TestPlatformRootDirectory,
-                    @"src\package\package\bin",
+                    "artifacts",
                     BuildConfiguration,
                     this.RunnerFramework,
                     this.TargetRuntime);
+
+                if (!Directory.Exists(publishDirectory))
+                {
+                    throw new InvalidOperationException($"Path '{publishDirectory}' does not exist, did you build the solution via build.cmd?");
                 }
 
-                return value;
+                return publishDirectory;
             }
         }
 
@@ -188,6 +177,15 @@ namespace Microsoft.TestPlatform.TestUtilities
         /// Gets the tools directory for dependent tools
         /// </summary>
         public string ToolsDirectory
+        {
+            get;
+            private set;
+        }
+
+        /// <summary>
+        /// Gets the test artifacts directory.
+        /// </summary>
+        public string TestArtifactsDirectory
         {
             get;
             private set;
@@ -284,7 +282,14 @@ namespace Microsoft.TestPlatform.TestUtilities
                     {
                         if (props.IsStartElement() && !string.IsNullOrEmpty(props.Name))
                         {
-                            dependencyProps.Add(props.Name, props.ReadElementContentAsString());
+                            if (!dependencyProps.ContainsKey(props.Name))
+                            {
+                                dependencyProps.Add(props.Name, props.ReadElementContentAsString());
+                            }
+                            else
+                            {
+                                dependencyProps[props.Name] = string.Join(", ", dependencyProps[props.Name], props.ReadElementContentAsString());
+                            }
                         }
                         props.Read();
                     }
@@ -292,6 +297,31 @@ namespace Microsoft.TestPlatform.TestUtilities
             }
 
             return dependencyProps;
+        }
+
+        /// <summary>
+        /// Gets the full path to a test asset.
+        /// </summary>
+        /// <param name="assetName">Name of the asset with extension. E.g. <c>SimpleUnitTest.csproj</c></param>
+        /// <returns>Full path to the test asset.</returns>
+        /// <remarks>
+        /// Test assets follow several conventions:
+        /// (a) They are built for supported frameworks. See <see cref="TargetFramework"/>.
+        /// (b) They are built for provided build configuration.
+        /// (c) Name of the test asset matches the parent directory name. E.g. <c>TestAssets\SimpleUnitTest\SimpleUnitTest.csproj</c> must
+        /// produce <c>TestAssets\SimpleUnitTest\SimpleUnitTest.csproj</c>
+        /// </remarks>
+        public string GetTestProject(string assetName)
+        {
+            var simpleAssetName = Path.GetFileNameWithoutExtension(assetName);
+            var assetPath = Path.Combine(
+                this.TestAssetsPath,
+                simpleAssetName,
+                assetName);
+
+            Assert.IsTrue(File.Exists(assetPath), "GetTestAsset: Path not found: {0}.", assetPath);
+
+            return assetPath;
         }
     }
 }

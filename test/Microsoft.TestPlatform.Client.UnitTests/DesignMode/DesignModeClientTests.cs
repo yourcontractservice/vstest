@@ -17,6 +17,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.UnitTests.DesignMode
     using Microsoft.VisualStudio.TestPlatform.ObjectModel;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client.Interfaces;
+    using Microsoft.VisualStudio.TestPlatform.ObjectModel.Logging;
     using Microsoft.VisualStudio.TestPlatform.PlatformAbstractions.Interfaces;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -66,6 +67,36 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.UnitTests.DesignMode
         }
 
         [TestMethod]
+        public void TestRunMessageHandlerShouldCallCommmunicationManagerIfMessageisError()
+        {
+            this.mockCommunicationManager.Setup(cm => cm.SendMessage(It.IsAny<string>()));
+
+            this.designModeClient.TestRunMessageHandler(new object(), new TestRunMessageEventArgs(TestMessageLevel.Error, "message"));
+
+            this.mockCommunicationManager.Verify(cm => cm.SendMessage(It.IsAny<string>(),It.IsAny<TestMessagePayload>()), Times.Once());
+        }
+
+        [TestMethod]
+        public void TestRunMessageHandlerShouldCallCommmunicationManagerIfMessageisWarning()
+        {
+            this.mockCommunicationManager.Setup(cm => cm.SendMessage(It.IsAny<string>()));
+
+            this.designModeClient.TestRunMessageHandler(new object(), new TestRunMessageEventArgs(TestMessageLevel.Warning, "message"));
+
+            this.mockCommunicationManager.Verify(cm => cm.SendMessage(It.IsAny<string>(), It.IsAny<TestMessagePayload>()), Times.Once());
+        }
+
+        [TestMethod]
+        public void TestRunMessageHandlerShouldNotCallCommmunicationManagerIfMessageisInformational()
+        {
+            this.mockCommunicationManager.Setup(cm => cm.SendMessage(It.IsAny<string>()));
+
+            this.designModeClient.TestRunMessageHandler(new object(), new TestRunMessageEventArgs(TestMessageLevel.Informational, "message"));
+
+            this.mockCommunicationManager.Verify(cm => cm.SendMessage(It.IsAny<string>(), It.IsAny<TestMessagePayload>()), Times.Never());
+        }
+
+        [TestMethod]
         public void DesignModeClientConnectShouldSetupChannel()
         {
             var verCheck = new Message { MessageType = MessageType.VersionCheck, Payload = this.protocolVersion };
@@ -106,7 +137,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.UnitTests.DesignMode
             this.mockCommunicationManager.SetupSequence(cm => cm.ReceiveMessage()).Returns(verCheck).Returns(sessionEnd);
 
             this.designModeClient.ConnectToClientAndProcessRequests(PortNumber, this.mockTestRequestManager.Object);
-            
+
             this.mockCommunicationManager.Verify(cm => cm.SendMessage(MessageType.VersionCheck, this.protocolVersion), Times.Once());
         }
 
@@ -168,7 +199,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.UnitTests.DesignMode
             this.mockCommunicationManager.SetupSequence(cm => cm.ReceiveMessage())
                 .Returns(getProcessStartInfoMessage)
                 .Returns(sessionEnd);
-            
+
             // Act.
             this.designModeClient.ConnectToClientAndProcessRequests(0, this.mockTestRequestManager.Object);
 
@@ -426,7 +457,7 @@ namespace Microsoft.VisualStudio.TestPlatform.Client.UnitTests.DesignMode
         public void DesignModeClientSendTestMessageShouldSendTestMessage()
         {
             var testPayload = new TestMessagePayload { MessageLevel = ObjectModel.Logging.TestMessageLevel.Error, Message = "DummyMessage" };
-            
+
             this.designModeClient.SendTestMessage(testPayload.MessageLevel, testPayload.Message);
 
             this.mockCommunicationManager.Verify(cm => cm.SendMessage(MessageType.TestMessage, It.IsAny<TestMessagePayload>()), Times.Once());

@@ -10,7 +10,7 @@
 // Allow command processors to validate against other command processors which are present.
 //   If throws during validation, output error and exit.
 // Process each command processor.
-//   If throws during validaton, output error and exit.
+//   If throws during validation, output error and exit.
 //   If the default (RunTests) command processor has no test containers output an error and exit
 //   If the default (RunTests) command processor has no tests to run output an error and exit
 
@@ -30,7 +30,6 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
     using System.Globalization;
     using System.IO;
     using System.Linq;
-
     using Microsoft.VisualStudio.TestPlatform.CommandLine.Internal;
     using Microsoft.VisualStudio.TestPlatform.CommandLine.Processors;
     using Microsoft.VisualStudio.TestPlatform.CommandLine.TestPlatformHelpers;
@@ -40,7 +39,6 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
     using Microsoft.VisualStudio.TestPlatform.CoreUtilities.Tracing.Interfaces;
     using Microsoft.VisualStudio.TestPlatform.ObjectModel;
     using Microsoft.VisualStudio.TestPlatform.Utilities;
-
     using CommandLineResources = Microsoft.VisualStudio.TestPlatform.CommandLine.Resources.Resources;
 
     /// <summary>
@@ -87,13 +85,13 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
         /// Arguments provided to perform execution with.
         /// </param>
         /// <returns>
-        /// Exit Codes - Zero (for sucessful command execution), One (for bad command) 
+        /// Exit Codes - Zero (for successful command execution), One (for bad command) 
         /// </returns>
         internal int Execute(params string[] args)
         {
             this.testPlatformEventSource.VsTestConsoleStart();
 
-            // If User specifies --nologo via dotnet, donot print splat screen
+            // If User specifies --nologo via dotnet, do not print splat screen
             if (args != null && args.Length !=0 && args.Contains("--nologo"))
             {
                 // Sanitizing this list, as I don't think we should write Argument processor for this.
@@ -173,14 +171,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
         private int GetArgumentProcessors(string[] args, out List<IArgumentProcessor> processors)
         {
             processors = new List<IArgumentProcessor>();
-
             int result = 0;
             var processorFactory = ArgumentProcessorFactory.Create();
-
             for (var index = 0; index < args.Length; index++)
             {
                 var arg = args[index];
-
                 // If argument is '--', following arguments are key=value pairs for run settings.
                 if (arg.Equals("--"))
                 {
@@ -188,7 +183,6 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
                     processors.Add(cliRunSettingsProcessor);
                     break;
                 }
-
                 var processor = processorFactory.CreateArgumentProcessor(arg);
 
                 if (processor != null)
@@ -234,21 +228,23 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
                 }
                 catch (Exception ex)
                 {
-                    if (ex is CommandLineException || ex is TestPlatformException)
-                    {
-                        this.Output.Error(false, ex.Message);
-                        result = 1;
-                    }
-                    else if (ex is SettingsException)
+                    if (ex is CommandLineException || ex is TestPlatformException || ex is SettingsException)
                     {
                         this.Output.Error(false, ex.Message);
                         result = 1;
                         this.showHelp = false;
                     }
+                    else if(ex is TestSourceException)
+                    {
+                        this.Output.Error(false, ex.Message);
+                        result = 1;
+                        this.showHelp = false;
+                        break;
+                    }
                     else
                     {
                         // Let it throw - User must see crash and report it with stack trace!
-                        // No need for recoverability as user will start a new vstest.console anwyay
+                        // No need for recoverability as user will start a new vstest.console anyway
                         throw;
                     }
                 }
@@ -298,7 +294,6 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
                     }
                 }
             }
-
             return result;
         }
 
@@ -312,7 +307,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
             Contract.Requires(argumentProcessors != null);
             Contract.Requires(processorFactory != null);
 
-            // Determine if any of the argument processors are actions. 
+            // Determine if any of the argument processors are actions.
             var isActionIncluded = argumentProcessors.Any((processor) => processor.Metadata.Value.IsAction);
 
             // If no action arguments have been provided, then add the default action argument.
@@ -355,7 +350,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
                 else
                 {
                     // Let it throw - User must see crash and report it with stack trace!
-                    // No need for recoverability as user will start a new vstest.console anwyay
+                    // No need for recoverability as user will start a new vstest.console anyway
                     throw;
                 }
             }
@@ -373,7 +368,6 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
             {
                 continueExecution = false;
             }
-
             return continueExecution;
         }
 
@@ -384,10 +378,8 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine
         {
             string assemblyVersion = string.Empty;
             assemblyVersion = Product.Version;
-
             string commandLineBanner = string.Format(CultureInfo.CurrentUICulture, CommandLineResources.MicrosoftCommandLineTitle, assemblyVersion);
             this.Output.WriteLine(commandLineBanner, OutputLevel.Information);
-
             this.Output.WriteLine(CommandLineResources.CopyrightCommandLineTitle, OutputLevel.Information);
             this.Output.WriteLine(string.Empty, OutputLevel.Information);
         }

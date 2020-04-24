@@ -48,6 +48,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
         private string testRunDirectory;
 
         /// <summary>
+        /// Target framework.
+        /// </summary>
+        private string targetFramework;
+
+        /// <summary>
         /// Test Logger Events instance which will be passed to loggers when they are initialized.
         /// </summary>
         private InternalTestLoggerEvents loggerEvents;
@@ -139,12 +144,13 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
 
             // Store test run directory. This runsettings is the final runsettings merging CLI args and runsettings.
             this.testRunDirectory = GetResultsDirectory(runSettings);
+            this.targetFramework = GetTargetFramework(runSettings)?.Name;
 
             var loggers = XmlRunSettingsUtilities.GetLoggerRunSettings(runSettings);
 
             foreach (var logger in loggers?.LoggerSettingsList ?? Enumerable.Empty<LoggerSettings>())
             {
-                // Dont add logger if its disabled.
+                // Don't add logger if its disabled.
                 if (!logger.IsEnabled)
                 {
                     continue;
@@ -455,6 +461,33 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
         }
 
         /// <summary>
+        /// Gets the target framework of the test run.
+        /// </summary>
+        /// <param name="runSettings">Test run settings.</param>
+        /// <returns>Target framework</returns>
+        internal Framework GetTargetFramework(string runSettings)
+        {
+            Framework targetFramework = null;
+            if (runSettings != null)
+            {
+                try
+                {
+                    RunConfiguration runConfiguration = XmlRunSettingsUtilities.GetRunConfigurationNode(runSettings);
+                    targetFramework = RunSettingsUtilities.GetTargetFramework(runConfiguration);
+                }
+                catch (SettingsException se)
+                {
+                    if (EqtTrace.IsErrorEnabled)
+                    {
+                        EqtTrace.Error("TestLoggerManager.GetResultsDirectory: Unable to get the target framework: Error {0}", se);
+                    }
+                }
+            }
+
+            return targetFramework;
+        }
+
+        /// <summary>
         /// Enables sending of events to the loggers which are registered.
         /// </summary>
         /// <remarks>
@@ -548,7 +581,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
             catch (Exception ex)
             {
                 EqtTrace.Error(
-                    "TestLoggerManager: Error occured while initializing the Logger assemblyQualifiedName : {0}, codeBase : {1} , Exception Details : {2}", assemblyQualifiedName, codeBase, ex);
+                    "TestLoggerManager: Error occurred while initializing the Logger assemblyQualifiedName : {0}, codeBase : {1} , Exception Details : {2}", assemblyQualifiedName, codeBase, ex);
                 return false;
             }
         }
@@ -582,9 +615,9 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
             }
             catch (Exception ex)
             {
+                var loggerUri = string.IsNullOrEmpty(extensionUri) ? logger.GetType().ToString() : extensionUri;
                 EqtTrace.Error(
-                    "TestLoggerManager: Error while initializing logger: {0}, Exception details: {1}",
-                    string.IsNullOrEmpty(extensionUri) ? logger.GetType().ToString() : extensionUri, ex);
+                    "TestLoggerManager: Error while initializing logger: {0}, Exception details: {1}", loggerUri, ex);
 
                 this.messageLogger.SendMessage(
                     TestMessageLevel.Error,
@@ -594,7 +627,8 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
                         string.IsNullOrEmpty(extensionUri) ? "type" : "uri",
                         string.IsNullOrEmpty(extensionUri) ? logger.GetType().ToString() : extensionUri,
                         ex));
-                return false;
+
+                throw new InvalidLoggerException($"Error while initializing logger: {loggerUri}, Exception details: {ex.Message}");
             }
 
             return true;
@@ -613,6 +647,7 @@ namespace Microsoft.VisualStudio.TestPlatform.CrossPlatEngine.Client
 
             // Add default logger parameters...
             loggerParams[DefaultLoggerParameterNames.TestRunDirectory] = testRunDirectory;
+            loggerParams[DefaultLoggerParameterNames.TargetFramework] = targetFramework;
             return loggerParams;
         }
 

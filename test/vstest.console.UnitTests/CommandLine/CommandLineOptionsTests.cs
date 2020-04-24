@@ -11,19 +11,23 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests.CommandLine
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using Moq;
     using System.IO;
-    using MSTest.TestFramework.AssertExtensions;
+    using vstest.console.Internal;
+    using Microsoft.Extensions.FileSystemGlobbing;
 
     [TestClass]
     public class CommandLineOptionsTests
     {
         private readonly Mock<IFileHelper> fileHelper;
+        private FilePatternParser filePatternParser;
         private readonly string currentDirectory = @"C:\\Temp";
 
         public CommandLineOptionsTests()
         {
             this.fileHelper = new Mock<IFileHelper>();
+            this.filePatternParser = new FilePatternParser(new Mock<Matcher>().Object, this.fileHelper.Object);
             CommandLineOptions.Instance.Reset();
             CommandLineOptions.Instance.FileHelper = this.fileHelper.Object;
+            CommandLineOptions.Instance.FilePatternParser = this.filePatternParser;
             this.fileHelper.Setup(fh => fh.GetCurrentDirectory()).Returns(currentDirectory);
         }
 
@@ -55,11 +59,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests.CommandLine
             CommandLineOptions.Instance.TargetDevice = "TargetDevice";
             Assert.IsTrue(CommandLineOptions.Instance.HasPhoneContext);
         }
-        
+
         [TestMethod]
         public void CommandLineOptionsAddSourceShouldThrowCommandLineExceptionForNullSource()
         {
-            Assert.ThrowsException<CommandLineException>(() => CommandLineOptions.Instance.AddSource(null));
+            Assert.ThrowsException<TestSourceException>(() => CommandLineOptions.Instance.AddSource(null));
         }
 
         [TestMethod]
@@ -73,22 +77,11 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests.CommandLine
             CommandLineOptions.Instance.AddSource(relativeTestFilePath);
             Assert.IsTrue(CommandLineOptions.Instance.Sources.Contains(absolutePath));
         }
-        
+
         [TestMethod]
         public void CommandLineOptionsAddSourceShouldThrowCommandLineExceptionForInvalidSource()
         {
-            Assert.ThrowsException<CommandLineException>(() => CommandLineOptions.Instance.AddSource("DummySource"));
-        }
-
-        [TestMethod]
-        public void CommandLineOptionsAddSourceShouldAddSourceThrowExceptionIfDuplicateSource()
-        {
-            var testFilePath = "C:\\DummyTestFile.txt";
-            this.fileHelper.Setup(fh => fh.Exists(testFilePath)).Returns(true);
-
-            CommandLineOptions.Instance.AddSource(testFilePath);
-            Assert.That.Throws<CommandLineException>(() => CommandLineOptions.Instance.AddSource(testFilePath))
-                .WithExactMessage("Duplicate source " + testFilePath + " specified.");
+            Assert.ThrowsException<TestSourceException>(() => CommandLineOptions.Instance.AddSource("DummySource"));
         }
 
         [TestMethod]
@@ -96,9 +89,9 @@ namespace Microsoft.VisualStudio.TestPlatform.CommandLine.UnitTests.CommandLine
         {
             string testFilePath = "C:\\DummyTestFile.txt";
             this.fileHelper.Setup(fh => fh.Exists(testFilePath)).Returns(true);
-            
+
             CommandLineOptions.Instance.AddSource(testFilePath);
-            
+
             Assert.IsTrue(CommandLineOptions.Instance.Sources.Contains(testFilePath));
         }
     }

@@ -3,7 +3,6 @@
 
 namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Engine.TesthostProtocol
 {
-    using System;
     using System.Collections.Generic;
 
     using Microsoft.VisualStudio.TestPlatform.ObjectModel.Client;
@@ -18,13 +17,13 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Engine.TesthostProtoco
         /// Initializes the execution manager.
         /// </summary>
         /// <param name="pathToAdditionalExtensions"> The path to additional extensions. </param>
-        void Initialize(IEnumerable<string> pathToAdditionalExtensions);
+        void Initialize(IEnumerable<string> pathToAdditionalExtensions, ITestMessageEventHandler testMessageEventsHandler);
 
         /// <summary>
         /// Starts the test run with sources.
         /// </summary>
         /// <param name="adapterSourceMap"> The adapter Source Map.  </param>
-        /// <param name="package"> The packages which actually contain sources. A testhost can at max execute for one pakage at time
+        /// <param name="package"> The packages which actually contain sources. A testhost can at max execute for one package at time
         /// Package can be null if test source, and package are same
         /// </param>
         /// <param name="runSettings"> The run Settings.  </param>
@@ -37,7 +36,7 @@ namespace Microsoft.VisualStudio.TestPlatform.ObjectModel.Engine.TesthostProtoco
         /// Starts the test run with tests.
         /// </summary>
         /// <param name="tests"> The test list. </param>
-        /// <param name="package"> The packages which actually contain sources. A testhost can at max execute for one pakage at time
+        /// <param name="package"> The packages which actually contain sources. A testhost can at max execute for one package at time
         /// Package can be null if test source, and package are same
         /// </param>
         /// <param name="runSettings"> The run Settings.  </param>
